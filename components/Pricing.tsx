@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Zap } from "lucide-react";
+import { Check, Zap, Loader2 } from "lucide-react";
 
 type Billing = "monthly" | "yearly";
 
@@ -11,7 +11,7 @@ const PLANS = [
     name: "Tek Seferlik",
     badge: null,
     monthly: 4.99,
-    yearly: null, // Abonelik yok
+    yearly: null,
     yearlyTotal: null,
     description: "Dene, beğen, al.",
     features: [
@@ -22,7 +22,6 @@ const PLANS = [
     ],
     cta: "Hemen İndir",
     highlight: false,
-    href: null, // Checkout flow'a gider
   },
   {
     id: "starter",
@@ -41,7 +40,6 @@ const PLANS = [
     ],
     cta: "Starter'a Geç",
     highlight: false,
-    href: "/api/create-checkout?tier=starter",
   },
   {
     id: "pro",
@@ -61,7 +59,6 @@ const PLANS = [
     ],
     cta: "Pro'ya Geç",
     highlight: true,
-    href: "/api/create-checkout?tier=pro",
   },
   {
     id: "agency",
@@ -80,12 +77,40 @@ const PLANS = [
     ],
     cta: "Agency'ye Geç",
     highlight: false,
-    href: "/api/create-checkout?tier=agency",
   },
 ];
 
-export default function Pricing() {
+// v2 — force recompile
+export default function Pricing({ jobId }: { jobId?: string }) {
   const [billing, setBilling] = useState<Billing>("monthly");
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  async function handleCheckout(planId: string) {
+    if (planId === "single" && !jobId) {
+      // Tek seferlik ödeme için önce marka üretimi gerekli
+      document.getElementById("try")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    setLoadingPlan(planId);
+    try {
+      const res = await fetch("/api/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: planId, billing, jobId: jobId ?? null }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error ?? "Bir hata oluştu.");
+      }
+    } catch {
+      alert("Bağlantı hatası. Tekrar dene.");
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
 
   return (
     <section className="py-24 px-4" id="pricing">
@@ -202,16 +227,20 @@ export default function Pricing() {
                 </ul>
 
                 {/* CTA */}
-                <a
-                  href={plan.href ?? "#try"}
-                  className={`block text-center py-3 rounded-xl text-sm font-display font-bold uppercase tracking-widest transition-all ${
+                <button
+                  onClick={() => handleCheckout(plan.id)}
+                  disabled={loadingPlan === plan.id}
+                  className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-display font-bold uppercase tracking-widest transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                     plan.highlight
                       ? "bg-brand-offwhite text-brand-black hover:bg-white"
                       : "border border-white/15 text-white/60 hover:border-white/30 hover:text-white/80"
                   }`}
                 >
+                  {loadingPlan === plan.id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : null}
                   {plan.cta}
-                </a>
+                </button>
               </div>
             );
           })}
