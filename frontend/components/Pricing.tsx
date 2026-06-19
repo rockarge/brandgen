@@ -80,6 +80,7 @@ const PLANS = [
   },
 ];
 
+// v2 — force recompile
 export default function Pricing({ jobId }: { jobId?: string }) {
   const [billing, setBilling] = useState<Billing>("monthly");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
