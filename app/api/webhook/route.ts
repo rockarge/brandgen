@@ -3,7 +3,9 @@ import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import Stripe from "stripe";
 
-export const config = { api: { bodyParser: false } };
+// Next.js App Router: raw body için bodyParser kapatmaya gerek yok
+// stripe.webhooks.constructEvent req.text() ile zaten raw body okur
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
