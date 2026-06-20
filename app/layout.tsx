@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { PageTracker } from "@/components/PageTracker";
+import { PageTracker } from "./components/PageTracker";
 
 export const metadata: Metadata = {
   title: "BrandGen — AI Marka Kimliği",
