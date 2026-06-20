@@ -35,7 +35,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "İş bulunamadı." }, { status: 404 });
   }
 
-  if (!job.paid || !job.download_url) {
+  // Webhook başarısız olmuş olabilir: Stripe paid ama DB'de paid=false
+  // → Fallback: direkt paid yap + finalize tetikle
+  if (!job.paid) {
+    const BACKEND_URL = process.env.BACKEND_URL || "https://brandgen-api.fly.dev";
+    await db.from("jobs").update({ paid: true, stripe_session_id: sessionId })
+      .eq("id", jobId);
+    // Finalize async tetikle — bir sonraki polling'de download_url hazır olacak
+    fetch(`${BACKEND_URL}/finalize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_id: jobId }),
+    }).catch((e) => console.error("Fallback finalize failed:", e));
+    return NextResponse.json(
+      { error: "Dosyalar hazırlanıyor, birkaç saniye bekle." },
+      { status: 202 }
+    );
+  }
+
+  if (!job.download_url) {
     return NextResponse.json(
       { error: "Dosyalar henüz hazır değil. Lütfen birkaç saniye bekle." },
       { status: 202 }
