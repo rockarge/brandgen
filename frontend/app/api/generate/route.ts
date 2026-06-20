@@ -79,12 +79,23 @@ export async function POST(req: NextRequest) {
         .gt("balance", 0); // race condition koruması
     }
 
-    // Fire-and-forget: trigger backend generation
-    fetch(`${BACKEND_URL}/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: jobId, prompt: prompt.trim(), tier }),
-    }).catch((e) => console.error("Backend trigger failed:", e));
+    // Backend tetikle — await ile (5sn timeout). Backend hemen {"queued":true} döner.
+    // Fire-and-forget Next.js serverless'ta response sonrası kesiliyor, await şart.
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      await fetch(`${BACKEND_URL}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: jobId, prompt: prompt.trim(), tier }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+    } catch (e) {
+      console.error("Backend trigger failed:", e);
+      // Hata olsa da jobId'yi döndür — kullanıcı preview sayfasına gider,
+      // admin tekrar tetikleyebilir veya webhook retry çalışır.
+    }
 
     return NextResponse.json({ jobId, tier });
   } catch (e) {
