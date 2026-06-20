@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PageTracker } from "@/components/PageTracker";
 
 export const metadata: Metadata = {
   title: "BrandGen — AI Marka Kimliği",
@@ -19,7 +20,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr">
-      <body className="grain">{children}</body>
+      <body className="grain">
+        <PageTracker />
+        {children}
+      </body>
     </html>
   );
 }

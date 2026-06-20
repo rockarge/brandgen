@@ -44,6 +44,12 @@ type Stats = {
   totalRevenue: number;
   totalCreditsPurchased: number;
   totalCreditsRemaining: number;
+  estimatedCostCents: number;
+  profit: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalPageViews: number;
+  viewsByPath: Record<string, number>;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -332,10 +338,11 @@ export default function AdminPage() {
             <StatCard label="Kalan Hak" value={stats.totalCreditsRemaining} color="#fb923c" sub="bakiye" />
           </div>
 
-          {/* ── Gelir kartı ── */}
+          {/* ── Gelir / Gider / Kar kartları ── */}
           <div style={styles.revenueRow}>
+            {/* Gelir */}
             <div style={styles.revenueCard}>
-              <div style={styles.revenueLabel}>Toplam Gelir (Tahmini)</div>
+              <div style={styles.revenueLabel}>Toplam Gelir</div>
               <div style={styles.revenueValue}>{usd(stats.totalRevenue)}</div>
               <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
                 <div>
@@ -348,6 +355,53 @@ export default function AdminPage() {
                   <div style={styles.revenueSubLabel}>Paket satışları</div>
                 </div>
               </div>
+            </div>
+
+            {/* Gider (token maliyet tahmini) */}
+            <div style={{ ...styles.revenueCard, borderLeftColor: "#f87171", borderColor: "#f8717133" }}>
+              <div style={styles.revenueLabel}>Tahmini Token Maliyeti</div>
+              <div style={{ ...styles.revenueValue, color: "#f87171" }}>{usd(stats.estimatedCostCents)}</div>
+              <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+                <div>
+                  <div style={{ ...styles.revenueSub, color: "#f87171", fontSize: 13 }}>
+                    {(stats.totalInputTokens / 1000).toFixed(0)}K
+                  </div>
+                  <div style={styles.revenueSubLabel}>input token</div>
+                </div>
+                <div style={{ width: 1, background: "#222" }} />
+                <div>
+                  <div style={{ ...styles.revenueSub, color: "#f87171", fontSize: 13 }}>
+                    {(stats.totalOutputTokens / 1000).toFixed(0)}K
+                  </div>
+                  <div style={styles.revenueSubLabel}>output token</div>
+                </div>
+              </div>
+              <div style={{ color: "#4b5563", fontSize: 10, marginTop: 6 }}>
+                * Haiku/Sonnet kullanımına göre tahmini
+              </div>
+            </div>
+
+            {/* Net Kar */}
+            <div style={{
+              ...styles.revenueCard,
+              borderLeftColor: stats.profit >= 0 ? "#4ade80" : "#f87171",
+              borderColor: stats.profit >= 0 ? "#4ade8033" : "#f8717133",
+            }}>
+              <div style={styles.revenueLabel}>Net Kar</div>
+              <div style={{
+                ...styles.revenueValue,
+                color: stats.profit >= 0 ? "#4ade80" : "#f87171",
+              }}>
+                {stats.profit >= 0 ? "+" : ""}{usd(stats.profit)}
+              </div>
+              <div style={{ color: "#4b5563", fontSize: 11, marginTop: 8 }}>
+                Gelir − Token Gideri
+              </div>
+              {stats.totalRevenue > 0 && (
+                <div style={{ color: "#6b7280", fontSize: 11, marginTop: 4 }}>
+                  Margin: %{Math.round((stats.profit / stats.totalRevenue) * 100)}
+                </div>
+              )}
             </div>
 
             {/* Cihaz dağılımı */}
@@ -394,6 +448,27 @@ export default function AdminPage() {
                 {tier} ({count})
               </span>
             ))}
+          </div>
+
+          {/* ── Sayfa görüntülemeleri ── */}
+          <div style={styles.revenueRow}>
+            <div style={{ ...styles.revenueCard, borderLeftColor: "#38bdf8", borderColor: "#38bdf833" }}>
+              <div style={styles.revenueLabel}>Sayfa Görüntülemeleri</div>
+              <div style={{ ...styles.revenueValue, color: "#38bdf8" }}>{stats.totalPageViews}</div>
+              <div style={{ color: "#4b5563", fontSize: 11, marginTop: 8 }}>toplam sayfa ziyareti</div>
+            </div>
+            <div style={{ ...styles.chartCard, flex: "1 1 300px" }}>
+              <div style={styles.chartTitle}>Sayfa Dağılımı</div>
+              {Object.keys(stats.viewsByPath).length > 0 ? (
+                <BarChart data={Object.fromEntries(
+                  Object.entries(stats.viewsByPath).sort((a,b) => b[1]-a[1]).slice(0,8)
+                )} />
+              ) : (
+                <div style={{ color: "#4b5563", fontSize: 12 }}>
+                  Henüz veri yok — tracking aktif, yeni ziyaretler kaydedilecek
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

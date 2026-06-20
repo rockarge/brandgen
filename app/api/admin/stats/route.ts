@@ -45,15 +45,25 @@ const TIER_REVENUE: Record<string, number> = {
   agency:       8900,
 };
 
+// Token maliyet tahmini ($ / 1M token)
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  "claude-haiku-4-5-20251001":     { input: 0.80, output: 4.0 },
+  "claude-haiku-3-5-20241022":     { input: 0.80, output: 4.0 },
+  "claude-3-haiku-20240307":       { input: 0.25, output: 1.25 },
+  "claude-sonnet-4-5":             { input: 3.0,  output: 15.0 },
+  "claude-3-5-sonnet-20241022":    { input: 3.0,  output: 15.0 },
+  "claude-opus-4":                 { input: 15.0, output: 75.0 },
+};
+const SYSTEM_PROMPT_TOKENS = 800; // tahmini sistem prompt uzunluğu
+
 export async function GET(req: NextRequest) {
-  // v2.1 — cache bust
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const db = supabaseAdmin();
 
-  // Jobs — son 200, tüm alanlar
+  // Jobs — son 200
   const { data: jobs, error: jobsErr } = await db
     .from("jobs")
     .select("id, prompt, status, paid, tier, ai_model, stripe_session_id, created_at, expires_at, error, preview_url, download_url, brand_story, brand_story_preview, user_agent, referrer")
@@ -71,10 +81,18 @@ export async function GET(req: NextRequest) {
     .order("updated_at", { ascending: false })
     .limit(200);
 
-  const creditsData = creditsErr ? [] : (credits ?? []);
-  const jobsData = jobs ?? [];
+  // Page views — son 1000
+  const { data: pageViewsRaw } = await db
+    .from("page_views")
+    .select("path, created_at")
+    .order("created_at", { ascending: false })
+    .limit(1000);
 
-  // ── İstatistikler ──────────────────────────────────────────────────────────
+  const creditsData = creditsErr ? [] : (credits ?? []);
+  const jobsData    = jobs ?? [];
+  const pvData      = pageViewsRaw ?? [];
+
+  // ── İstatistikler ─────────────────────────────────────────────────────────
 
   const totalJobs   = jobsData.length;
   const paidJobs    = jobsData.filter(j => j.paid).length;
@@ -104,13 +122,52 @@ export async function GET(req: NextRequest) {
     Object.entries(allRefs).sort((a, b) => b[1] - a[1]).slice(0, 8)
   );
 
-  // Gelir hesabı
-  const soloRevenue   = paidJobs * 999; // $9.99 × paid job sayısı
+  // Gelir hesabı (sent)
+  const soloRevenue   = paidJobs * 999;
   const creditRevenue = creditsData.reduce((s, c) => s + (TIER_REVENUE[c.tier] ?? 0), 0);
   const totalRevenue  = soloRevenue + creditRevenue;
 
   const totalCreditsPurchased = creditsData.length;
   const totalCreditsRemaining = creditsData.reduce((s, c) => s + (c.balance ?? 0), 0);
+
+  // ── Token maliyet tahmini ─────────────────────────────────────────────────
+  let totalInputTokens  = 0;
+  let totalOutputTokens = 0;
+
+  for (const j of jobsData) {
+    if (!j.ai_model) continue;
+    // input: sistem prompt + kullanıcı promptu
+    const inputT = SYSTEM_PROMPT_TOKENS + Math.ceil((j.prompt?.length ?? 0) / 4);
+    // output: üretilen brand story veya preview (JSON overhead için /3)
+    const outputText = j.brand_story || j.brand_story_preview || "";
+    const outputT = outputText.length > 0 ? Math.ceil(outputText.length / 3) : 600; // hata joblarında min tahmin
+    totalInputTokens  += inputT;
+    totalOutputTokens += outputT;
+  }
+
+  // Ağırlıklı model ortalaması
+  const modelGroups: Record<string, number> = {};
+  for (const j of jobsData) {
+    if (j.ai_model) modelGroups[j.ai_model] = (modelGroups[j.ai_model] ?? 0) + 1;
+  }
+  let estimatedCostUSD = 0;
+  for (const [model, count] of Object.entries(modelGroups)) {
+    const pricing = MODEL_PRICING[model] ?? { input: 0.80, output: 4.0 };
+    const ratio = count / Math.max(totalJobs, 1);
+    estimatedCostUSD += ratio * (
+      (totalInputTokens * pricing.input + totalOutputTokens * pricing.output) / 1_000_000
+    );
+  }
+  const estimatedCostCents = Math.round(estimatedCostUSD * 100);
+  const profit = totalRevenue - estimatedCostCents;
+
+  // ── Sayfa görüntülemeleri ─────────────────────────────────────────────────
+  const totalPageViews = pvData.length;
+  const viewsByPath: Record<string, number> = {};
+  for (const pv of pvData) {
+    const p = pv.path || "/";
+    viewsByPath[p] = (viewsByPath[p] ?? 0) + 1;
+  }
 
   return NextResponse.json({
     stats: {
@@ -127,8 +184,14 @@ export async function GET(req: NextRequest) {
       totalRevenue,
       totalCreditsPurchased,
       totalCreditsRemaining,
+      estimatedCostCents,
+      profit,
+      totalInputTokens,
+      totalOutputTokens,
+      totalPageViews,
+      viewsByPath,
     },
-    jobs: jobsData,
+    jobs:    jobsData,
     credits: creditsData,
   });
 }
