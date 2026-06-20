@@ -20,28 +20,46 @@ export default function SuccessPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchDownload = async () => {
+    if (!id || !sessionId) {
+      setError("Geçersiz oturum.");
+      setLoading(false);
+      return;
+    }
+
+    // Finalize webhook async çalışır — max 30s, 3s aralıkla polling yap
+    let attempts = 0;
+    const MAX_ATTEMPTS = 10;
+
+    const tryFetch = async () => {
+      attempts++;
       try {
-        const res = await fetch(
-          `/api/download?jobId=${id}&session_id=${sessionId}`
-        );
+        const res = await fetch(`/api/download?jobId=${id}&session_id=${sessionId}`);
+
+        if (res.status === 202) {
+          // Henüz hazır değil — tekrar dene
+          if (attempts < MAX_ATTEMPTS) {
+            setTimeout(tryFetch, 3000);
+          } else {
+            setError("Dosyalar hazırlanırken zaman aşımı. Lütfen birkaç dakika bekleyip sayfayı yenile.");
+            setLoading(false);
+          }
+          return;
+        }
+
         if (!res.ok) {
           const d = await res.json();
           throw new Error(d.error || "İndirme bağlantısı alınamadı.");
         }
+
         setData(await res.json());
+        setLoading(false);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Bir hata oluştu.");
-      } finally {
         setLoading(false);
       }
     };
 
-    if (id && sessionId) fetchDownload();
-    else {
-      setError("Geçersiz oturum.");
-      setLoading(false);
-    }
+    tryFetch();
   }, [id, sessionId]);
 
   if (loading) {
