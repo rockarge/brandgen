@@ -54,7 +54,13 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   "claude-3-5-sonnet-20241022":    { input: 3.0,  output: 15.0 },
   "claude-opus-4":                 { input: 15.0, output: 75.0 },
 };
-const SYSTEM_PROMPT_TOKENS = 800; // tahmini sistem prompt uzunluğu
+// Token tahmin sabitleri (pipeline'da 2 Claude API çağrısı var)
+// Çağrı 1 — brand_brief.py: brief JSON üretimi (tier'a göre model)
+const BRIEF_CALL_INPUT_TOKENS  = 1200; // system(~800) + prompt + örnek brief
+const BRIEF_CALL_OUTPUT_TOKENS = 2000; // JSON brief çıktısı
+// Çağrı 2 — html_preview.py: window.BRAND + SVG üretimi (her zaman Haiku)
+const HTML_CALL_INPUT_TOKENS   = 3900; // system(~2200) + brief JSON(~1500) + user prompt(~200)
+const HTML_CALL_OUTPUT_TOKENS  = 6000; // SVG logo + social + strateji çıktısı
 
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
@@ -151,16 +157,26 @@ export async function GET(req: NextRequest) {
       estimatedCostUSD += (inT * pricing.input + outT * pricing.output) / 1_000_000;
     }
   } else {
-    // Gerçek veri yoksa tahmin (eski joblar için)
+    // Gerçek veri yoksa tahmin — 2 çağrı ayrı ayrı hesaplanır
+    const haikuPricing = MODEL_PRICING["claude-haiku-4-5-20251001"]; // html_preview.py her zaman Haiku
     for (const j of jobsData) {
       if (!j.ai_model) continue;
-      const inputT  = SYSTEM_PROMPT_TOKENS + Math.ceil((j.prompt?.length ?? 0) / 4);
-      const outputText = j.brand_story || j.brand_story_preview || "";
-      const outputT = outputText.length > 0 ? Math.ceil(outputText.length / 3) : 600;
-      totalInputTokens  += inputT;
-      totalOutputTokens += outputT;
-      const pricing = MODEL_PRICING[j.ai_model] ?? { input: 0.80, output: 4.0 };
-      estimatedCostUSD += (inputT * pricing.input + outputT * pricing.output) / 1_000_000;
+      // Çağrı 1: brand_brief.py — tier modeline göre
+      const briefPricing = MODEL_PRICING[j.ai_model] ?? { input: 0.80, output: 4.0 };
+      const promptExtra = Math.ceil((j.prompt?.length ?? 0) / 4);
+      const briefInT  = BRIEF_CALL_INPUT_TOKENS + promptExtra;
+      const briefOutT = BRIEF_CALL_OUTPUT_TOKENS;
+      totalInputTokens  += briefInT;
+      totalOutputTokens += briefOutT;
+      estimatedCostUSD  += (briefInT * briefPricing.input + briefOutT * briefPricing.output) / 1_000_000;
+
+      // Çağrı 2: html_preview.py — her zaman Haiku, SVG dahil büyük output
+      // output_tokens DB'de gerçek değer varsa onu kullan (html_preview gerçek output), yoksa sabit tahmin
+      const htmlOutT = (j.output_tokens != null && j.output_tokens > 0) ? j.output_tokens : HTML_CALL_OUTPUT_TOKENS;
+      const htmlInT  = HTML_CALL_INPUT_TOKENS + briefOutT; // brief JSON da input sayılır
+      totalInputTokens  += htmlInT;
+      totalOutputTokens += htmlOutT;
+      estimatedCostUSD  += (htmlInT * haikuPricing.input + htmlOutT * haikuPricing.output) / 1_000_000;
     }
   }
 
@@ -174,6 +190,10 @@ export async function GET(req: NextRequest) {
     const p = pv.path || "/";
     viewsByPath[p] = (viewsByPath[p] ?? 0) + 1;
   }
+
+  // preview_html çok büyük (SVG base64 dahil MB olabilir) — admin listeye gönderme
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const jobsForClient = jobsData.map(({ preview_html: _ph, ...rest }: any) => rest);
 
   return NextResponse.json({
     stats: {
@@ -198,7 +218,7 @@ export async function GET(req: NextRequest) {
       totalPageViews,
       viewsByPath,
     },
-    jobs:    jobsData,
+    jobs:    jobsForClient,
     credits: creditsData,
   });
 }
