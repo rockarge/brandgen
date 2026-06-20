@@ -29,7 +29,8 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
+      // Her istek Supabase'den taze HTML çeksin — per-job dinamik içerik
+      "Cache-Control": "no-store",
     },
   });
 }
