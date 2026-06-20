@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         .eq("id", jobId);
 
       // Trigger backend to generate unwatermarked download
-      const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+      const BACKEND_URL = process.env.BACKEND_URL || "https://brandgen-api.fly.dev";
       await fetch(`${BACKEND_URL}/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
