@@ -1,0 +1,35 @@
+{
+  "name": "brandgen-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "rm -rf .next/cache",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "^18",
+    "react-dom": "^18",
+    "@supabase/supabase-js": "^2.44.2",
+    "stripe": "^16.2.0",
+    "@stripe/stripe-js": "^4.1.0",
+    "framer-motion": "^11.3.2",
+    "lucide-react": "^0.407.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5"
+  }
+}
