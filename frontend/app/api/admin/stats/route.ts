@@ -46,6 +46,7 @@ const TIER_REVENUE: Record<string, number> = {
 };
 
 export async function GET(req: NextRequest) {
+  // v2.1 — cache bust
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
