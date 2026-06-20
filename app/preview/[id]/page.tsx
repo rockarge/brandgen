@@ -28,6 +28,7 @@ interface JobData {
   status: JobStatus;
   prompt: string;
   preview_url?: string;
+  preview_html_url?: string;
   brand_story_preview?: string;
   brief_data?: BriefData;
   error?: string;
@@ -638,12 +639,23 @@ export default function PreviewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Preview — 3/5 */}
           <div className="lg:col-span-3">
-            {brief ? (
+            {job.preview_html_url ? (
+              // Yol C-2: no1-brandkit template — cinematic/playful animasyonlarla
+              <div className="rounded-2xl overflow-hidden border border-white/10 relative" style={{ height: "700px" }}>
+                <iframe
+                  src={job.preview_html_url}
+                  title="Brand Kit Preview"
+                  style={{ width: "100%", height: "100%", border: "none", borderRadius: "16px" }}
+                  sandbox="allow-scripts allow-same-origin"
+                />
+              </div>
+            ) : brief ? (
+              // Fallback: HTML yoksa React component
               <div className="rounded-2xl overflow-hidden border border-white/10 relative">
                 <BrandKitPreview brief={brief} />
               </div>
             ) : job.preview_url ? (
-              // Fallback: eski brief_data yoksa Pillow image göster
+              // Fallback: eski Pillow image
               <div className="watermark-container rounded-2xl overflow-hidden border border-white/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={job.preview_url} alt="Brand preview" className="w-full object-cover" />
