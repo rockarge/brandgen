@@ -22,29 +22,48 @@ export async function POST(req: NextRequest) {
 
   const db = supabaseAdmin();
 
+  // Paket tier → üretim hakkı sayısı
+  const PACK_BALANCE: Record<string, number> = {
+    starter_pack: 5,
+    studio_pack:  15,
+    pro_pack:     30,
+    agency:       60,
+  };
+
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const { jobId } = session.metadata || {};
+      const { jobId, tier } = session.metadata || {};
+      const email = session.customer_details?.email ?? null;
 
-      if (!jobId) break;
+      // ── Solo / job bazlı ödeme ──────────────────────────────────────────
+      if (jobId) {
+        await db
+          .from("jobs")
+          .update({ paid: true, stripe_session_id: session.id })
+          .eq("id", jobId);
 
-      // Mark as paid
-      await db
-        .from("jobs")
-        .update({
-          paid: true,
-          stripe_session_id: session.id,
-        })
-        .eq("id", jobId);
+        const BACKEND_URL = process.env.BACKEND_URL || "https://brandgen-api.fly.dev";
+        await fetch(`${BACKEND_URL}/finalize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ job_id: jobId }),
+        }).catch((e) => console.error("Finalize trigger failed:", e));
+      }
 
-      // Trigger backend to generate unwatermarked download
-      const BACKEND_URL = process.env.BACKEND_URL || "https://brandgen-api.fly.dev";
-      await fetch(`${BACKEND_URL}/finalize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobId }),
-      }).catch((e) => console.error("Finalize trigger failed:", e));
+      // ── Paket satın alımı → credits tablosuna yaz ───────────────────────
+      if (tier && PACK_BALANCE[tier]) {
+        await db.from("credits").upsert(
+          {
+            session_id: session.id,
+            email,
+            tier,
+            balance:    PACK_BALANCE[tier],
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "session_id" }
+        );
+      }
 
       break;
     }

@@ -26,6 +26,13 @@ export default function SuccessPage() {
       return;
     }
 
+    // Paket satın alımı ise session_id cookie'ye yaz (90 gün, sıfır sürtünme)
+    fetch("/api/set-cookie", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId }),
+    }).catch(() => {}); // sessiz hata — kritik değil
+
     // Finalize webhook async çalışır — max 30s, 3s aralıkla polling yap
     let attempts = 0;
     const MAX_ATTEMPTS = 10;
@@ -157,13 +164,13 @@ export default function SuccessPage() {
         {/* Upsell */}
         <div className="mt-8 p-5 rounded-2xl border border-white/10 bg-white/3">
           <p className="text-sm text-white/50 font-body mb-4">
-            Sınırsız proje, revizyon ve white-label PDF için Pro&apos;ya geç.
+            Daha fazla üretim hakkı için paket al — süresi dolmaz.
           </p>
           <a
-            href="/?plan=pro"
+            href="/#pricing"
             className="inline-flex items-center gap-2 text-sm font-display font-bold uppercase tracking-wide text-brand-gold hover:text-brand-gold/80 transition-colors"
           >
-            Pro&apos;ya Geç — $24/ay <ArrowRight size={14} />
+            Paketleri Gör <ArrowRight size={14} />
           </a>
         </div>
 

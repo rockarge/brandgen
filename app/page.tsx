@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Zap, Shield, Clock } from "lucide-react";
+import { ArrowRight, Zap, Shield, Clock, X } from "lucide-react";
 import Pricing from "@/components/Pricing";
 
 const EXAMPLES = [
@@ -17,6 +17,36 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  // "Paketim var" modal state
+  const [showPackModal, setShowPackModal] = useState(false);
+  const [packEmail, setPackEmail] = useState("");
+  const [packLoading, setPackLoading] = useState(false);
+  const [packError, setPackError] = useState("");
+  const [packSuccess, setPackSuccess] = useState<{ tier: string; balance: number } | null>(null);
+
+  const handlePackLookup = async () => {
+    if (!packEmail.includes("@")) {
+      setPackError("Geçerli bir e-posta girin.");
+      return;
+    }
+    setPackLoading(true);
+    setPackError("");
+    try {
+      const res = await fetch("/api/lookup-credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: packEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Paket bulunamadı.");
+      setPackSuccess({ tier: data.tier, balance: data.balance });
+    } catch (e: unknown) {
+      setPackError(e instanceof Error ? e.message : "Bir hata oluştu.");
+    } finally {
+      setPackLoading(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || prompt.trim().length < 10) {
@@ -59,12 +89,79 @@ export default function Home() {
         <span className="font-display text-xl font-black tracking-widest text-brand-offwhite uppercase">
           Brand<span className="text-brand-gold">Gen</span>
         </span>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-white/30 font-mono">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => { setShowPackModal(true); setPackSuccess(null); setPackError(""); setPackEmail(""); }}
+            className="text-xs font-mono text-white/30 hover:text-brand-gold/70 transition-colors"
+          >
+            Paketim var
+          </button>
+          <span className="text-xs text-white/20 font-mono">
             by Windy Venture Capital
           </span>
         </div>
       </nav>
+
+      {/* "Paketim var" Modal */}
+      {showPackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[#0f0f0f] border border-white/10 rounded-2xl p-8 relative">
+            <button
+              onClick={() => setShowPackModal(false)}
+              className="absolute top-4 right-4 text-white/30 hover:text-white/60 transition-colors"
+            >
+              <X size={16} />
+            </button>
+
+            {packSuccess ? (
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-brand-gold/10 border border-brand-gold/30 flex items-center justify-center">
+                  <Zap size={20} className="text-brand-gold" />
+                </div>
+                <p className="font-display font-black text-brand-offwhite uppercase text-lg mb-1">
+                  Paket Yüklendi
+                </p>
+                <p className="text-sm text-white/40 font-mono mb-6">
+                  {packSuccess.balance} üretim hakkınız hazır.
+                </p>
+                <button
+                  onClick={() => setShowPackModal(false)}
+                  className="w-full py-3 bg-brand-offwhite text-brand-black rounded-xl font-display font-bold text-sm uppercase tracking-widest hover:bg-white transition-colors"
+                >
+                  Üretmeye Başla
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="font-display font-black text-brand-offwhite uppercase text-lg mb-1">
+                  Paketimi Yükle
+                </p>
+                <p className="text-xs text-white/30 font-mono mb-6">
+                  Satın alırken kullandığın e-postayı gir.
+                </p>
+                <input
+                  type="email"
+                  value={packEmail}
+                  onChange={(e) => setPackEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handlePackLookup()}
+                  placeholder="email@domain.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-brand-offwhite placeholder-white/20 text-sm outline-none focus:border-brand-gold/40 transition-all font-mono mb-3"
+                />
+                {packError && (
+                  <p className="text-xs text-red-400/80 font-mono mb-3">{packError}</p>
+                )}
+                <button
+                  onClick={handlePackLookup}
+                  disabled={packLoading}
+                  className="w-full py-3 bg-brand-offwhite text-brand-black rounded-xl font-display font-bold text-sm uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-40"
+                >
+                  {packLoading ? "Kontrol ediliyor…" : "Paketi Yükle"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-20">
