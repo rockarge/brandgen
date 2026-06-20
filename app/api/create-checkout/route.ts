@@ -4,8 +4,9 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-// Tek seferlik paket planları (mode: payment, inline price_data)
-const ONE_TIME_PACKS: PlanTier[] = ["starter_pack", "studio_pack", "pro_pack"];
+// Tek seferlik paket planları
+type OneTimePack = "starter_pack" | "studio_pack" | "pro_pack";
+const ONE_TIME_PACKS: OneTimePack[] = ["starter_pack", "studio_pack", "pro_pack"];
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,9 +73,9 @@ export async function POST(req: NextRequest) {
         .update({ stripe_session_id: session.id })
         .eq("id", jobId);
 
-    } else if (ONE_TIME_PACKS.includes(tier)) {
+    } else if (ONE_TIME_PACKS.includes(tier as OneTimePack)) {
       // Paket planlar: tek seferlik ödeme, jobId opsiyonel
-      const plan = PRICES[tier] as { amount: number; currency: string; name: string; description: string };
+      const plan = PRICES[tier as OneTimePack] as { amount: number; currency: string; name: string; description: string };
 
       const successUrl = jobId
         ? `${APP_URL}/success/${jobId}?session_id={CHECKOUT_SESSION_ID}&pack=${tier}`
