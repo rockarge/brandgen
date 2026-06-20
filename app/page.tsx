@@ -169,10 +169,10 @@ export default function Home() {
           <div className="w-px h-8 bg-white/10" />
           <div>
             <div className="text-2xl font-display font-black text-brand-offwhite">
-              $4.99
+              $9.99
             </div>
             <div className="text-xs font-mono text-white/30 mt-1">
-              Tam kit indirme
+              Tek üretim indirme
             </div>
           </div>
         </div>

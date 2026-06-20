@@ -567,7 +567,7 @@ export default function PreviewPage() {
       const res = await fetch("/api/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: id, tier: "single" }),
+        body: JSON.stringify({ jobId: id, tier: "solo" }),
       });
       const { url } = await res.json();
       if (url) window.location.href = url;
@@ -707,10 +707,10 @@ export default function PreviewPage() {
             {/* CTA */}
             <div className="p-5 rounded-2xl border border-brand-gold/30 bg-brand-gold/5">
               <div className="flex items-baseline gap-2 mb-1">
-                <span className="font-display font-black text-4xl text-brand-offwhite">$4.99</span>
+                <span className="font-display font-black text-4xl text-brand-offwhite">$9.99</span>
                 <span className="text-white/30 font-mono text-xs">tek seferlik</span>
               </div>
-              <p className="text-xs text-white/40 font-mono mb-5">Kahve fiyatına tam marka kiti.</p>
+              <p className="text-xs text-white/40 font-mono mb-5">Bu üretimi watermarksız, tam kalitede indir.</p>
               <button
                 onClick={handleBuy}
                 disabled={checkoutLoading}
@@ -719,7 +719,7 @@ export default function PreviewPage() {
                 {checkoutLoading ? (
                   <span className="w-4 h-4 border-2 border-brand-black/20 border-t-brand-black rounded-full animate-spin" />
                 ) : (
-                  <><Download size={16} /> İndir — $4.99</>
+                  <><Download size={16} /> İndir — $9.99</>
                 )}
               </button>
               <p className="mt-3 text-center text-xs font-mono text-white/20">Stripe ile güvenli ödeme. Anında indirme.</p>
@@ -727,9 +727,9 @@ export default function PreviewPage() {
 
             {/* Upsell */}
             <div className="p-4 rounded-xl border border-white/5 bg-white/2">
-              <div className="text-xs font-mono text-white/20 mb-2">Daha fazla marka yapacaksan?</div>
+              <div className="text-xs font-mono text-white/20 mb-2">Birden fazla marka yapacaksan?</div>
               <div className="text-sm font-body text-white/40">
-                <strong className="text-white/60">Starter $9/ay</strong> — 3 proje/ay, sınırsız revizyon, 1 yıl bulut saklama.
+                <strong className="text-white/60">Starter Pack $39</strong> — 5 üretim hakkı, süresi dolmaz.
               </div>
             </div>
           </div>

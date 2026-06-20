@@ -4,32 +4,44 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 });
 
+// Tüm planlar inline price_data — Stripe'ta önceden ürün oluşturmak gerekmez.
+// Agency abonelik (subscription mode) da inline tanımlı.
 export const PRICES = {
-  single: {
-    amount: 499, // $4.99 in cents
+  // Tek seferlik — job bazlı (üretim sonrası ödeme)
+  solo: {
+    amount: 999, // $9.99
     currency: "usd",
-    name: "BrandGen — Tek Seferlik Brand Kit",
-    description: "Watermarksız tam brand kit. Haiku AI ile üretildi.",
+    name: "BrandGen Solo — 1 Üretim",
+    description: "Watermarksız tam brand kit. PNG + SVG + PDF.",
   },
-  starter: {
-    monthly: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID!,
-    yearly:  process.env.STRIPE_STARTER_YEARLY_PRICE_ID!,
-    name: "BrandGen Starter",
-    aiModel: "Sonnet",
+  // Tek seferlik paketler — üretim hakkı (credits sistemi gelecek sprint)
+  starter_pack: {
+    amount: 3900, // $39
+    currency: "usd",
+    name: "BrandGen Starter Pack — 5 Üretim",
+    description: "5 üretim hakkı. Watermarksız ZIP (PNG + SVG + PDF).",
   },
-  pro: {
-    monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID!,
-    yearly:  process.env.STRIPE_PRO_YEARLY_PRICE_ID!,
-    name: "BrandGen Pro",
-    aiModel: "Opus",         // VIP farklılaştırıcı
+  studio_pack: {
+    amount: 9900, // $99
+    currency: "usd",
+    name: "BrandGen Studio Pack — 15 Üretim",
+    description: "15 üretim hakkı. Gelişmiş AI çıktısı. E-posta desteği.",
   },
+  pro_pack: {
+    amount: 17900, // $179
+    currency: "usd",
+    name: "BrandGen Pro Pack — 30 Üretim",
+    description: "30 üretim hakkı. Gelişmiş AI çıktısı. E-posta desteği.",
+  },
+  // Agency — abonelik (subscription mode, inline price_data)
   agency: {
-    monthly: process.env.STRIPE_AGENCY_MONTHLY_PRICE_ID!,
-    yearly:  process.env.STRIPE_AGENCY_YEARLY_PRICE_ID!,
+    monthly: { amount: 8900, interval: "month" as const },  // $89/ay
+    yearly:  { amount: 69900, interval: "year" as const },   // $699/yıl
+    currency: "usd",
     name: "BrandGen Agency",
-    aiModel: "Opus",
+    description: "60 üretim/ay. Gelişmiş AI çıktısı. Öncelikli e-posta desteği.",
   },
 } as const;
 
 export type BillingInterval = "monthly" | "yearly";
-export type PlanTier = "single" | "starter" | "pro" | "agency";
+export type PlanTier = "solo" | "starter_pack" | "studio_pack" | "pro_pack" | "agency";

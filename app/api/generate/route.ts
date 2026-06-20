@@ -6,7 +6,8 @@ const BACKEND_URL = process.env.BACKEND_URL || "https://brandgen-api.fly.dev";
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt } = await req.json();
+    // tier: free (default Haiku) | solo | starter_pack | studio_pack | pro_pack | agency
+    const { prompt, tier = "free" } = await req.json();
 
     if (!prompt || prompt.trim().length < 10) {
       return NextResponse.json(
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     fetch(`${BACKEND_URL}/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: jobId, prompt: prompt.trim() }),
+      body: JSON.stringify({ job_id: jobId, prompt: prompt.trim(), tier }),
     }).catch((e) => console.error("Backend trigger failed:", e));
 
     return NextResponse.json({ jobId });

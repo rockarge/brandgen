@@ -4,19 +4,22 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+// Tek seferlik paket planları (mode: payment, inline price_data)
+const ONE_TIME_PACKS: PlanTier[] = ["starter_pack", "studio_pack", "pro_pack"];
+
 export async function POST(req: NextRequest) {
   try {
     const {
       jobId,
-      tier = "single" as PlanTier,
+      tier = "solo" as PlanTier,
       billing = "monthly" as BillingInterval,
     } = await req.json();
 
     const db = supabaseAdmin();
     let session;
 
-    if (tier === "single") {
-      // Single: jobId zorunlu
+    if (tier === "solo") {
+      // Solo: job bazlı tek seferlik ödeme (üretim sonrası)
       if (!jobId) {
         return NextResponse.json({ error: "jobId gerekli" }, { status: 400 });
       }
@@ -44,18 +47,16 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const plan = PRICES.solo;
       session = await stripe.checkout.sessions.create({
         mode: "payment",
         payment_method_types: ["card"],
         line_items: [
           {
             price_data: {
-              currency: PRICES.single.currency,
-              unit_amount: PRICES.single.amount,
-              product_data: {
-                name: PRICES.single.name,
-                description: PRICES.single.description,
-              },
+              currency: plan.currency,
+              unit_amount: plan.amount,
+              product_data: { name: plan.name, description: plan.description },
             },
             quantity: 1,
           },
@@ -66,19 +67,52 @@ export async function POST(req: NextRequest) {
         expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       });
 
-      // Store session id
       await db
         .from("jobs")
         .update({ stripe_session_id: session.id })
         .eq("id", jobId);
-    } else {
-      // Subscription tiers (starter / pro / agency) — jobId opsiyonel
-      const planPrices = PRICES[tier as keyof typeof PRICES] as {
-        monthly: string;
-        yearly: string;
-      };
-      const priceId =
-        billing === "yearly" ? planPrices.yearly : planPrices.monthly;
+
+    } else if (ONE_TIME_PACKS.includes(tier)) {
+      // Paket planlar: tek seferlik ödeme, jobId opsiyonel
+      const plan = PRICES[tier] as { amount: number; currency: string; name: string; description: string };
+
+      const successUrl = jobId
+        ? `${APP_URL}/success/${jobId}?session_id={CHECKOUT_SESSION_ID}&pack=${tier}`
+        : `${APP_URL}/?pack_purchased=${tier}&session_id={CHECKOUT_SESSION_ID}`;
+
+      const cancelUrl = jobId
+        ? `${APP_URL}/preview/${jobId}`
+        : `${APP_URL}/#pricing`;
+
+      session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: plan.currency,
+              unit_amount: plan.amount,
+              product_data: { name: plan.name, description: plan.description },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata: { jobId: jobId ?? "", tier },
+      });
+
+      if (jobId) {
+        await db
+          .from("jobs")
+          .update({ stripe_session_id: session.id })
+          .eq("id", jobId);
+      }
+
+    } else if (tier === "agency") {
+      // Agency: abonelik (inline price_data ile subscription)
+      const plan = PRICES.agency;
+      const priceConfig = billing === "yearly" ? plan.yearly : plan.monthly;
 
       const successUrl = jobId
         ? `${APP_URL}/success/${jobId}?session_id={CHECKOUT_SESSION_ID}`
@@ -91,19 +125,31 @@ export async function POST(req: NextRequest) {
       session = await stripe.checkout.sessions.create({
         mode: "subscription",
         payment_method_types: ["card"],
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: [
+          {
+            price_data: {
+              currency: plan.currency,
+              unit_amount: priceConfig.amount,
+              recurring: { interval: priceConfig.interval },
+              product_data: { name: plan.name, description: plan.description },
+            },
+            quantity: 1,
+          },
+        ],
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: { jobId: jobId ?? "", tier, billing },
       });
 
-      // Store session id — sadece jobId varsa
       if (jobId) {
         await db
           .from("jobs")
           .update({ stripe_session_id: session.id })
           .eq("id", jobId);
       }
+
+    } else {
+      return NextResponse.json({ error: "Geçersiz plan." }, { status: 400 });
     }
 
     return NextResponse.json({ url: session.url });
