@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await db
     .from("jobs")
     .select(
-      "id, status, prompt, preview_url, preview_html_url, brand_story_preview, brief_data, error, expires_at"
+      "id, status, prompt, preview_url, brand_story_preview, brief_data, error, expires_at"
     )
     .eq("id", jobId)
     .single();

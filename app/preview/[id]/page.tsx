@@ -639,11 +639,11 @@ export default function PreviewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Preview — 3/5 */}
           <div className="lg:col-span-3">
-            {job.preview_html_url ? (
-              // Yol C-2: no1-brandkit template — cinematic/playful animasyonlarla
+            {job.status === "done" && job.brief_data ? (
+              // Yol C-2: no1-brandkit template — Next.js API route üzerinden servis
               <div className="rounded-2xl overflow-hidden border border-white/10 relative" style={{ height: "700px" }}>
                 <iframe
-                  src={job.preview_html_url}
+                  src={`/api/brand-kit/${job.id}`}
                   title="Brand Kit Preview"
                   style={{ width: "100%", height: "100%", border: "none", borderRadius: "16px" }}
                   sandbox="allow-scripts allow-same-origin"
