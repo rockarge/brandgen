@@ -48,6 +48,7 @@ type Stats = {
   profit: number;
   totalInputTokens: number;
   totalOutputTokens: number;
+  hasRealTokens?: boolean;
   totalPageViews: number;
   viewsByPath: Record<string, number>;
 };
@@ -357,9 +358,11 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Gider (token maliyet tahmini) */}
+            {/* Gider (token maliyet) */}
             <div style={{ ...styles.revenueCard, borderLeftColor: "#f87171", borderColor: "#f8717133" }}>
-              <div style={styles.revenueLabel}>Tahmini Token Maliyeti</div>
+              <div style={styles.revenueLabel}>
+                Token Maliyeti {stats.hasRealTokens ? "✓ Gerçek" : "(Tahmini)"}
+              </div>
               <div style={{ ...styles.revenueValue, color: "#f87171" }}>{usd(stats.estimatedCostCents)}</div>
               <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
                 <div>

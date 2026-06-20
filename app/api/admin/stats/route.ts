@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
   // Jobs — son 200
   const { data: jobs, error: jobsErr } = await db
     .from("jobs")
-    .select("id, prompt, status, paid, tier, ai_model, stripe_session_id, created_at, expires_at, error, preview_url, download_url, brand_story, brand_story_preview, user_agent, referrer")
+    .select("id, prompt, status, paid, tier, ai_model, stripe_session_id, created_at, expires_at, error, preview_url, download_url, brand_story, brand_story_preview, user_agent, referrer, input_tokens, output_tokens")
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -130,34 +130,40 @@ export async function GET(req: NextRequest) {
   const totalCreditsPurchased = creditsData.length;
   const totalCreditsRemaining = creditsData.reduce((s, c) => s + (c.balance ?? 0), 0);
 
-  // ── Token maliyet tahmini ─────────────────────────────────────────────────
+  // ── Token maliyet hesabı ──────────────────────────────────────────────────
+  // Önce gerçek token verisi var mı kontrol et (fly.dev backend'den yazılıyor)
+  const jobsWithRealTokens = jobsData.filter(j => j.input_tokens != null);
+  const hasRealTokens = jobsWithRealTokens.length > 0;
+
   let totalInputTokens  = 0;
   let totalOutputTokens = 0;
+  let estimatedCostUSD  = 0;
 
-  for (const j of jobsData) {
-    if (!j.ai_model) continue;
-    // input: sistem prompt + kullanıcı promptu
-    const inputT = SYSTEM_PROMPT_TOKENS + Math.ceil((j.prompt?.length ?? 0) / 4);
-    // output: üretilen brand story veya preview (JSON overhead için /3)
-    const outputText = j.brand_story || j.brand_story_preview || "";
-    const outputT = outputText.length > 0 ? Math.ceil(outputText.length / 3) : 600; // hata joblarında min tahmin
-    totalInputTokens  += inputT;
-    totalOutputTokens += outputT;
+  if (hasRealTokens) {
+    // Gerçek veriler
+    for (const j of jobsData) {
+      if (!j.ai_model) continue;
+      const inT  = (j.input_tokens  ?? 0) as number;
+      const outT = (j.output_tokens ?? 0) as number;
+      totalInputTokens  += inT;
+      totalOutputTokens += outT;
+      const pricing = MODEL_PRICING[j.ai_model] ?? { input: 0.80, output: 4.0 };
+      estimatedCostUSD += (inT * pricing.input + outT * pricing.output) / 1_000_000;
+    }
+  } else {
+    // Gerçek veri yoksa tahmin (eski joblar için)
+    for (const j of jobsData) {
+      if (!j.ai_model) continue;
+      const inputT  = SYSTEM_PROMPT_TOKENS + Math.ceil((j.prompt?.length ?? 0) / 4);
+      const outputText = j.brand_story || j.brand_story_preview || "";
+      const outputT = outputText.length > 0 ? Math.ceil(outputText.length / 3) : 600;
+      totalInputTokens  += inputT;
+      totalOutputTokens += outputT;
+      const pricing = MODEL_PRICING[j.ai_model] ?? { input: 0.80, output: 4.0 };
+      estimatedCostUSD += (inputT * pricing.input + outputT * pricing.output) / 1_000_000;
+    }
   }
 
-  // Ağırlıklı model ortalaması
-  const modelGroups: Record<string, number> = {};
-  for (const j of jobsData) {
-    if (j.ai_model) modelGroups[j.ai_model] = (modelGroups[j.ai_model] ?? 0) + 1;
-  }
-  let estimatedCostUSD = 0;
-  for (const [model, count] of Object.entries(modelGroups)) {
-    const pricing = MODEL_PRICING[model] ?? { input: 0.80, output: 4.0 };
-    const ratio = count / Math.max(totalJobs, 1);
-    estimatedCostUSD += ratio * (
-      (totalInputTokens * pricing.input + totalOutputTokens * pricing.output) / 1_000_000
-    );
-  }
   const estimatedCostCents = Math.round(estimatedCostUSD * 100);
   const profit = totalRevenue - estimatedCostCents;
 
@@ -188,6 +194,7 @@ export async function GET(req: NextRequest) {
       profit,
       totalInputTokens,
       totalOutputTokens,
+      hasRealTokens,
       totalPageViews,
       viewsByPath,
     },
