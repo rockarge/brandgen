@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
-// cache-bust: 2026-06-19
+// cache-bust: 20260621-001430
 const nextConfig = {
+  generateBuildId: async () => "brandgen-v2-20260621-001430",
   images: {
     remotePatterns: [
       {
