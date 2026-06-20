@@ -286,8 +286,8 @@ export default function Home() {
           {[
             {
               icon: <Zap size={16} className="text-brand-gold" />,
-              title: "Avant-garde estetik",
-              desc: "Bureau Borsche, Patavatsız referans alınarak üretilir",
+              title: "Stratejik kimlik",
+              desc: "Sektör kalıplarının dışında. Her çıktı markana özel, sıfırdan üretilir.",
             },
             {
               icon: <Shield size={16} className="text-brand-gold" />,
