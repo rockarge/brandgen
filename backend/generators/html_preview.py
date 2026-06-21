@@ -67,8 +67,8 @@ def _is_dark(hex_color: str) -> bool:
     luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return luminance < 0.5
 
-_SVG_SYSTEM = """Sen dünya standartlarında bir marka kimlik tasarımcısısın.
-Referansların: Bureau Borsche, Sagmeister & Walsh, Pentagram, Collins, Wolff Olins, Landor — her marka için o markanın DNA'sına uygun, özgün, karakter sahibi işler.
+_SVG_SYSTEM = """Sen Bureau Borsche, Sagmeister & Walsh, Pentagram, Collins seviyesinde çalışan bir marka kimlik tasarımcısısın.
+Bu ajansların ortak özelliği: her logo bir KAVRAMDAN türer — şekil kütüphanesinden değil.
 Sana stüdyo DNA'sı, marka paleti, isim ve konsept verilecek. Tam olarak 5 SVG tasarımı üreteceksin.
 
 ÇIKTI FORMAT — her SVG için bu bloğu kullan:
@@ -83,39 +83,49 @@ Bloklar arasında başka HİÇBİR ŞEY yazma.
 
 SVG TEKNİK KURALLAR:
 - Her açılan tag kapanmalı: <text>KAYA</text> ✓ / <text>KAYA<text> ✗
-- Marka adındaki özel karakterler (İ Ş Ğ Ü Ö Ç) direkt UTF-8 olarak yaz — XML entity kullanma
+- Marka adındaki özel karakterler (İ Ş Ğ Ü Ö Ç) direkt UTF-8 olarak yaz — SVG bunu destekler, dönüştürme
 - viewBox dışına taşan element yazma
 - Font-family SVG içinde belirtme — sistem san-serif yeterli
 - Türkçe karakter içeren kelimeleri ASLA letter-by-letter ayrı <text> elementine bölme
-  Yanlış: <text>Z</text><text>İ</text> — Doğru: <text>ZİPZİP</text>
+  YANLIŞ: <text>Ş</text><text>İ</text><text>P</text> → DOĞRU: <text>ŞİPŞAK</text> (tek element)
 
-KESIN YASAKLAR (bunları yapan tasarım sıfır puan):
-- İnce dalgalı/dekoratif çizgi ekleme
-- Küçük nokta/konfeti serpme (tasarım elementi olarak değil, dekorasyon olarak)
-- "metin + yatay çizgi + küçük altyazı" kombinasyonu — bu template, logo değil
-- Boş/sade arka plan üzerine sadece metin koymak
-- "BRAND IDENTITY" veya "EST. NOW" gibi placeholder metinler
+KAVRAMSAL TASARIM SÜRECİ — her logo için bu sırayı izle:
+1. Bu markanın tek cümlelik özü nedir? (konseptten)
+2. Bu özü temsil eden GÖRSEL METAFOR nedir? (şekil değil, anlam)
+3. O metaforu forma çevir. Sadece sonra harf/isim ekle.
 
-LOGO TASARIM FELSEFESİ:
-Her marka için o markanın DNA'sından türeyen, başka markaya konamayacak özgün form.
-- Güç: büyük ölçek kontrastı, cesur geometri, anlamlı negatif boşluk
-- Collins DNA → kesin geometri, hassas grid, güçlü renk bloğu
-- Sagmeister & Walsh → ekspresif form, cesur ölçek oynaması, kural kıran kompozisyon
-- Pentagram → klasik-çağdaş denge, anlam yüklü soyutlama, minimal ama derin
-- Bureau Borsche → kültürel referans, bold tipografi baskınlığı, grafik punch
-- Wolff Olins → sistemik düşünce, modüler yapı, güçlü wordmark
-- Landor → kurumsal güç, güven veren form, net hiyerarşi
-- Monogram (logo_icon): tek güçlü form — geometrik şekil İÇİNDE harf veya harfi kesen şekil.
-  YASAK: düz kare çerçeve içinde tek harf
+SWAP TESTİ — geçmeden teslim etme:
+"Bu logoyu başka bir markaya koyabilir miyim?" → Eğer evet, tasarımı sil ve baştan başla.
+Logo bu markaya ÖZGÜ olmalı. Genel "modern streetwear" logosu değil.
 
-UYGULAMA GÖRSELLERI (app1, app2) — güçlü kompozisyon:
-- app1: Ekranı kaplayan büyük tipografi (tagline'dan 2-4 kelime, font-size 180-220).
-  Güçlü renk bloğu veya diagonal şerit — duygusal darbe hissi. Alt köşede marka adı.
-- app2: Tamamen farklı yaklaşım. Marka adı büyük stroke-only (fill="none", stroke kalın).
-  Arka planda grid/pattern veya tekrarlayan geometrik element. Renk aksan bloğu.
+KESİN YASAKLAR (bunları yapan tasarım geçersiz):
+- Harf/monogram içinde ya da etrafında dörtgen/daire çerçeve — bu 2010 tarzı, yasaklı
+- "metin + yatay çizgi + küçük altyazı" kombinasyonu — template, tasarım değil
+- İnce dekoratif çizgi, küçük nokta serpme, rastgele geometri
+- Boş zemin üzerine sadece metin
+- "BRAND IDENTITY", "EST. 2024" gibi placeholder metinler
+- Rastgele geometric accent shape — her şeklin konseptle bağı olsun
 
-Her iki uygulama görseli birbirinden görsel dil olarak ayrışsın.
-Renk bloğu, diagonal, tam dolgu, overlay — bunları kullan."""
+STÜDYO DNA UYGULAMASI:
+- Collins → Harfin kendi geometrisini kır, grid sistemini görünür kıl, renk bloğu harfi taşısın
+- Bureau Borsche → Tipografi BİR grafik obje gibi davransın. Dev, çarpıcı, kültürel punch
+- Sagmeister & Walsh → Beklenmedik ölçek ve angle. Metin + form çakışabilir, kural kırılabilir
+- Pentagram → Harfin içinde gizli anlam. Negatif boşluk çalıştır. Minimal ama derin
+- Landor → Formun kendisi güven verir. Net hiyerarşi, her eleman kendi yerinde
+- Wolff Olins → İsim SİSTEM olur. Renk kimliği taşır, harfler modüler sisteme dönüşür
+
+LOGO_ICON için (320x320) — monogram kuralı:
+YASAK: harf + dörtgen/daire çerçeve
+DOĞRU: Harfin kendi formundan türeyen sembol. Harfi kesen şekil. Harfin içindeki boşluktan doğan form.
+Konsept metaforu burada en saf haliyle olsun.
+
+UYGULAMA GÖRSELLERİ — editorial design enerjisi:
+- app1 (1080x1080): Tagline'dan en güçlü 2-3 kelime, her kelime ayrı satırda, devasa boyut.
+  Arka plan renk bloğu veya diagonal şerit. Kompozisyon poster gibi çalışsın, reklam gibi değil.
+- app2 (1080x1080): app1'den tamamen farklı dil. Marka adı büyük stroke-only (fill="none").
+  Arka planda konseptten türeyen tekrarlayan element. Renk aksan bloğu köşede.
+
+Her eleman için kendine sor: "Bu element neden burada, ne anlatıyor?" — cevabı yoksa siliyorsun."""
 
 
 def _ascii_safe(name: str) -> str:
@@ -130,7 +140,9 @@ def _ascii_safe(name: str) -> str:
 
 def _build_svg_prompt(brief: dict) -> str:
     name = brief.get("brand_name", "BRAND")
-    name_safe = _ascii_safe(name)  # SVG text için ASCII-safe versiyon
+    # SVG UTF-8'i destekler — orijinal Türkçe ismi kullan, dönüştürme
+    # _ascii_safe sadece font-size hesabı için (karakter sayısı aynı)
+    name_safe = name  # display için orijinal isim
     primary = brief.get("primary_color", "#C9A25A")
     secondary = brief.get("secondary_color", "#8B8B7A")
     accent2 = brief.get("accent_color") or secondary
@@ -152,8 +164,8 @@ def _build_svg_prompt(brief: dict) -> str:
     visual_language = brief.get("visual_language", "")
 
     # Font-size hesabı: viewBox genişliği / (karakter sayısı × 0.65) = max font-size
-    # Bu, SVG text'in viewBox dışına taşmasını önler
-    name_len = max(len(name_safe), 1)
+    # Türkçe karakterler (İ Ş Ğ vb.) birer karakter sayılır — len() doğru çalışır
+    name_len = max(len(name), 1)
     max_font_logo = min(90, int(480 / (name_len * 0.65)))  # logo_primary: ~480px kullanılabilir genişlik
     max_font_app2 = min(200, int(860 / (name_len * 0.65)))  # app2 stroke-only: 1080px - margin
 
@@ -199,16 +211,21 @@ RENKLER:
 
 ===SVG:logo_primary===
 viewBox="0 0 800 280". Arka plan: {bg} (ZORUNLU — değiştirme).
-"{name_safe}" bold wordmark. Metin rengi {text}. Accent {primary}.
-FONT-SIZE SINIRI: "{name_safe}" = {name_len} karakter → maksimum {max_font_logo}px. Bunu AŞ MA.
+Marka adı: "{name_safe}" — Türkçe karakterleri OLDUĞU GİBİ yaz (İ, Ş, Ğ, Ü, Ö, Ç desteklenir).
+Tüm ismi TEK <text> elementinde yaz. ASLA harf-harf bölme.
+FONT-SIZE SINIRI: {name_len} karakter → maksimum {max_font_logo}px. Bunu AŞ MA.
+Metin rengi {text}. Accent {primary}.
+KAVRAMSAL ANCHOR: Logo konseptini ({logo_concept}) görsel forma çevir — şekil değil anlam.
 {studio_logo_guide}
-Wordmark: sadece metin + çizgi kombinasyonu YASAK. Geometrik form veya renk bloğu şart.
+Wordmark: "metin + yatay çizgi" kombinasyonu YASAK. Konseptten türeyen form şart.
 ===END===
 
 ===SVG:logo_icon===
-viewBox="0 0 320 320". "{name_safe[0]}" baş harfi — ama salt kare çerçeve içinde harf YASAK.
-Arka plan: {bg}. {primary} ile güçlü form. Metin {text}.
+viewBox="0 0 320 320". "{name_safe[0]}" baş harfi başlangıç noktası — ama harf + kare/daire çerçeve KESİN YASAK.
+Harfin kendi geometrisinden veya marka konseptinden türeyen sembol.
+Arka plan: {bg}. {primary} ile form. Metin rengi {text}.
 Stüdyo: {studio_label} — o stüdyonun monogram anlayışını uygula.
+SWAP TESTİ: Bu ikon başka bir markada çalışır mı? → Çalışıyorsa sil, yeniden yap.
 ===END===
 
 ===SVG:logo_mono===
