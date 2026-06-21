@@ -1,3 +1,4 @@
+// v2.1 — Brand Kit açma butonu + Preview (JPG) etiketi
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
