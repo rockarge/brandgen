@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "regions": ["fra1"],
-  "buildCommand": "rm -rf .next/cache && npm run build",
+  "buildCommand": "rm -rf .next && next build",
   "headers": [
     {
       "source": "/api/webhook",
