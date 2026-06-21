@@ -151,6 +151,16 @@ def _build_svg_prompt(brief: dict) -> str:
     logo_concept = brief.get("logo_concept", "")
     visual_language = brief.get("visual_language", "")
 
+    # Font-size hesabı: viewBox genişliği / (karakter sayısı × 0.65) = max font-size
+    # Bu, SVG text'in viewBox dışına taşmasını önler
+    name_len = max(len(name_safe), 1)
+    max_font_logo = min(90, int(480 / (name_len * 0.65)))  # logo_primary: ~480px kullanılabilir genişlik
+    max_font_app2 = min(200, int(860 / (name_len * 0.65)))  # app2 stroke-only: 1080px - margin
+
+    tagline_words = [w for w in tagline.split() if w][:4]
+    max_tagline_word_len = max((len(w) for w in tagline_words), default=8)
+    max_font_app1 = min(220, int(900 / (max_tagline_word_len * 0.65)))  # app1: 1080px - margin
+
     # Studio DNA inject — hangi stüdyo atandıysa o stüdyonun tasarım dilini ver
     studio_dna = brief.get("studio_dna", {})
     studio_label = studio_dna.get("label", "Pentagram")
@@ -189,7 +199,8 @@ RENKLER:
 
 ===SVG:logo_primary===
 viewBox="0 0 800 280". Arka plan: {bg} (ZORUNLU — değiştirme).
-"{name_safe}" büyük/bold. Metin rengi {text}. Accent {primary}.
+"{name_safe}" bold wordmark. Metin rengi {text}. Accent {primary}.
+FONT-SIZE SINIRI: "{name_safe}" = {name_len} karakter → maksimum {max_font_logo}px. Bunu AŞ MA.
 {studio_logo_guide}
 Wordmark: sadece metin + çizgi kombinasyonu YASAK. Geometrik form veya renk bloğu şart.
 ===END===
@@ -207,14 +218,17 @@ SADECE {text} rengi. Zemin şeffaf (background rect YOK).
 
 ===SVG:app1===
 viewBox="0 0 1080 1080". Zemin {bg}.
-Tagline'dan 2-3 kelime BÜYÜK (font-size 180-240): "{tagline[:35]}"
-font-weight="900", {text} rengi. Alt kısımda "{name_safe}" {primary} rengiyle.
+Tagline'dan 2-3 kelime BÜYÜK, her kelime ayrı <text> satırında: "{tagline[:35]}"
+FONT-SIZE SINIRI: En uzun kelime {max_tagline_word_len} karakter → maksimum {max_font_app1}px. Bunu AŞMA.
+font-weight="900", {text} rengi. Her kelime için y değerini kademeli artır (250, 250+font-size, ...).
+Alt kısımda "{name_safe}" {primary} rengiyle, daha küçük (font-size 60-80).
 Güçlü renk bloğu veya diagonal şerit — {primary} veya {secondary} kullan.
 ===END===
 
 ===SVG:app2===
 viewBox="0 0 1080 1080". app1'den tamamen farklı kompozisyon.
-"{name_safe}" büyük stroke-only (fill="none", stroke="{primary}", stroke-width="8-12", font-size 180+).
+"{name_safe}" büyük stroke-only (fill="none", stroke="{primary}", stroke-width="10", font-size {max_font_app2}px MAX).
+FONT-SIZE SINIRI: "{name_safe}" = {name_len} karakter → maksimum {max_font_app2}px. Bunu AŞMA.
 Arka planda tekrarlayan geometrik grid veya pattern. Renk aksan bloğu.
 Alt veya üst köşede konsept: "{concept[:50]}"
 ===END==="""
