@@ -68,8 +68,8 @@ def _is_dark(hex_color: str) -> bool:
     return luminance < 0.5
 
 _SVG_SYSTEM = """Sen dünya standartlarında bir marka kimlik tasarımcısısın.
-Referansların: Bureau Borsche, Sagmeister & Walsh, Pentagram — sinematik, cesur, karakter sahibi işler.
-Sana marka paleti, isim ve konsept verilecek. Tam olarak 5 SVG tasarımı üreteceksin.
+Referansların: Bureau Borsche, Sagmeister & Walsh, Pentagram, Collins, Wolff Olins, Landor — her marka için o markanın DNA'sına uygun, özgün, karakter sahibi işler.
+Sana stüdyo DNA'sı, marka paleti, isim ve konsept verilecek. Tam olarak 5 SVG tasarımı üreteceksin.
 
 ÇIKTI FORMAT — her SVG için bu bloğu kullan:
 ===SVG:logo_primary===
@@ -83,28 +83,54 @@ Bloklar arasında başka HİÇBİR ŞEY yazma.
 
 SVG TEKNİK KURALLAR:
 - Her açılan tag kapanmalı: <text>KAYA</text> ✓ / <text>KAYA<text> ✗
-- Türkçe karakterler direkt kullanılabilir — base64 YOK
+- Marka adındaki özel karakterler (İ Ş Ğ Ü Ö Ç) direkt UTF-8 olarak yaz — XML entity kullanma
 - viewBox dışına taşan element yazma
-- font-family: 'Arial Black', 'Helvetica Neue', Arial, sans-serif
+- Font-family SVG içinde belirtme — sistem san-serif yeterli
+- Türkçe karakter içeren kelimeleri ASLA letter-by-letter ayrı <text> elementine bölme
+  Yanlış: <text>Z</text><text>İ</text> — Doğru: <text>ZİPZİP</text>
+
+KESIN YASAKLAR (bunları yapan tasarım sıfır puan):
+- İnce dalgalı/dekoratif çizgi ekleme
+- Küçük nokta/konfeti serpme (tasarım elementi olarak değil, dekorasyon olarak)
+- "metin + yatay çizgi + küçük altyazı" kombinasyonu — bu template, logo değil
+- Boş/sade arka plan üzerine sadece metin koymak
+- "BRAND IDENTITY" veya "EST. NOW" gibi placeholder metinler
 
 LOGO TASARIM FELSEFESİ:
-Sıradan "metin + ince çizgi" kombinasyonu YASAK. Marka karakterini taşıyan özgün form.
-- Güç: büyük ölçek kontrastı, cesur geometri, negatif boşluk kullanımı
-- Karaktere uygun: endüstriyel → keskin köşe, sertlik / lüks → zarif orantı / tech → hassas geometri
-- Monogram (logo_icon): baş harf + güçlü form/çerçeve — tek bakışta okunabilir
+Her marka için o markanın DNA'sından türeyen, başka markaya konamayacak özgün form.
+- Güç: büyük ölçek kontrastı, cesur geometri, anlamlı negatif boşluk
+- Collins DNA → kesin geometri, hassas grid, güçlü renk bloğu
+- Sagmeister & Walsh → ekspresif form, cesur ölçek oynaması, kural kıran kompozisyon
+- Pentagram → klasik-çağdaş denge, anlam yüklü soyutlama, minimal ama derin
+- Bureau Borsche → kültürel referans, bold tipografi baskınlığı, grafik punch
+- Wolff Olins → sistemik düşünce, modüler yapı, güçlü wordmark
+- Landor → kurumsal güç, güven veren form, net hiyerarşi
+- Monogram (logo_icon): tek güçlü form — geometrik şekil İÇİNDE harf veya harfi kesen şekil.
+  YASAK: düz kare çerçeve içinde tek harf
 
-UYGULAMA GÖRSELLERI (app1, app2) — sinematik kompozisyon:
-- app1: Büyük statement — tagline veya marka adının yarısı canvas'ı doldursun. Alt kısımda marka adı.
-  Güçlü geometrik şekil veya renkli blok. "Duygusal darbe" hissi.
-- app2: Farklı kompozisyon. Konsept metninden alınan kelime büyük outline/şeffaf.
-  Grid, pattern veya tekrarlayan element. "Hareket" veya "ritim" hissi.
+UYGULAMA GÖRSELLERI (app1, app2) — güçlü kompozisyon:
+- app1: Ekranı kaplayan büyük tipografi (tagline'dan 2-4 kelime, font-size 180-220).
+  Güçlü renk bloğu veya diagonal şerit — duygusal darbe hissi. Alt köşede marka adı.
+- app2: Tamamen farklı yaklaşım. Marka adı büyük stroke-only (fill="none", stroke kalın).
+  Arka planda grid/pattern veya tekrarlayan geometrik element. Renk aksan bloğu.
 
-Her iki uygulama görseli birbiriyle aynı hissettirmesin — kontrast kompozisyon.
-Renk bloğu, diagonal, tam dolgu, negatif boşluk — bunları kullan, boş beyaz/siyah fon bırakma."""
+Her iki uygulama görseli birbirinden görsel dil olarak ayrışsın.
+Renk bloğu, diagonal, tam dolgu, overlay — bunları kullan."""
+
+
+def _ascii_safe(name: str) -> str:
+    """
+    SVG <text> için marka adını güvenli hale getir.
+    Türkçe büyük harfleri ASCII eşdeğerine çevir (İ→I, Ş→S, vb.)
+    Böylece font rendering problemi yaşanmaz.
+    """
+    tr_map = str.maketrans("İĞÜŞÖÇığüşöç", "IGUSSOigusso")
+    return name.translate(tr_map)
 
 
 def _build_svg_prompt(brief: dict) -> str:
     name = brief.get("brand_name", "BRAND")
+    name_safe = _ascii_safe(name)  # SVG text için ASCII-safe versiyon
     primary = brief.get("primary_color", "#C9A25A")
     secondary = brief.get("secondary_color", "#8B8B7A")
     accent2 = brief.get("accent_color") or secondary
@@ -112,7 +138,6 @@ def _build_svg_prompt(brief: dict) -> str:
 
     if "playful" in energy:
         bg = brief.get("bg_color", "#FFFFFF")
-        # playful için bg açık tonsa beyaz/açık metin mantıksız — kontrol et
         if not _is_dark(bg):
             text = "#1A1A1A"
         else:
@@ -123,11 +148,30 @@ def _build_svg_prompt(brief: dict) -> str:
 
     tagline = brief.get("tagline", "")
     concept = brief.get("concept_statement", "")
-    font_display = brief.get("font_display", "Space Grotesk")
     logo_concept = brief.get("logo_concept", "")
     visual_language = brief.get("visual_language", "")
 
-    return f"""MARKA: {name}
+    # Studio DNA inject — hangi stüdyo atandıysa o stüdyonun tasarım dilini ver
+    studio_dna = brief.get("studio_dna", {})
+    studio_label = studio_dna.get("label", "Pentagram")
+    studio_style = studio_dna.get("style", "")
+    studio_sector = studio_dna.get("sector", "")
+
+    # Stüdyo bazlı logo yönergesi
+    studio_logo_guide = {
+        "Collins":          "Kesin geometri + güçlü renk sistemi. Wordmark: tam dolgu renk bloğu içinde büyük metin. İkon: grid-based, modüler.",
+        "Bureau Borsche":   "Kültürel referans + bold tipografi baskınlığı. Büyük/cesur yazı, grafik punch. İkon: harfi taşıyan güçlü şekil.",
+        "Sagmeister&Walsh": "Kural kıran form + ekspresif ölçek. Metin ve şekil çakışabilir. İkon: sürpriz geometri, beklenmedik negatif alan.",
+        "Pentagram":        "Anlam yüklü soyutlama + zariflik. Minimal ama derin. İkon: harften türeyen özgün form, net sembol.",
+        "Landor":           "Güven veren form + net hiyerarşi. Dengeli oran, temiz duruş. İkon: bold monogram, kurumsal güç.",
+        "Wolff Olins":      "Sistemik wordmark + modüler yapı. Güçlü renk kimliği, sade ama güçlü. İkon: renk odaklı form.",
+        "Base Design":      "Minimal + yapısal kesinlik. Tipografi odaklı, fazlalık yok. İkon: negatif alan kullanan form.",
+    }.get(studio_label, "Özgün ve marka DNA'sına sadık. Cüretkâr ama işlevsel.")
+
+    return f"""MARKA: {name_safe}
+STÜDYO DNA: {studio_label} ({studio_sector})
+STÜDYO STİLİ: {studio_style}
+LOGO YÖNERGESİ: {studio_logo_guide}
 ENERJİ: {energy}
 TAGLINE: {tagline}
 KONSEPT: {concept}
@@ -141,40 +185,38 @@ RENKLER:
   İkincil: {secondary}
   Vurgu 2: {accent2}
 
-Font: {font_display}
-
-5 SVG tasarla:
+5 SVG tasarla — stüdyo DNA'sını her tasarımda hissettir:
 
 ===SVG:logo_primary===
-viewBox="0 0 800 280". Arka plan rengi ZORUNLU: {bg} — bunu değiştirme.
-Marka adı "{name}" büyük/bold, negatif letter-spacing (-0.03 ile -0.06 arası).
-Metin rengi {text}. Accent {primary} ile 1-2 geometrik detay.
-Logo konseptine uygun: {logo_concept or "minimal ve güçlü"}
-NOT: Arka planı primary veya accent renge boyama — sadece {bg} kullan.
+viewBox="0 0 800 280". Arka plan: {bg} (ZORUNLU — değiştirme).
+"{name_safe}" büyük/bold. Metin rengi {text}. Accent {primary}.
+{studio_logo_guide}
+Wordmark: sadece metin + çizgi kombinasyonu YASAK. Geometrik form veya renk bloğu şart.
 ===END===
 
 ===SVG:logo_icon===
-viewBox="0 0 320 320". "{name[0]}" baş harfi veya kısaltma.
-Arka plan: {bg} (ZORUNLU — değiştirme). Geometrik çerçeve/form, accent={primary}.
-Metin {text}. Monogram — özgün, ayırt edici.
+viewBox="0 0 320 320". "{name_safe[0]}" baş harfi — ama salt kare çerçeve içinde harf YASAK.
+Arka plan: {bg}. {primary} ile güçlü form. Metin {text}.
+Stüdyo: {studio_label} — o stüdyonun monogram anlayışını uygula.
 ===END===
 
 ===SVG:logo_mono===
-viewBox="0 0 800 280". logo_primary'nin tek renkli versiyonu.
-SADECE {text} rengi. Zemin şeffaf (background rect YAZMA).
+viewBox="0 0 800 280". logo_primary tek renkli versiyon.
+SADECE {text} rengi. Zemin şeffaf (background rect YOK).
 ===END===
 
 ===SVG:app1===
-viewBox="0 0 1080 1080". Instagram post. Zemin {bg}.
-Büyük statement metin (tagline'dan 3-5 kelime: "{tagline[:40]}").
-Alt kısımda marka adı "{name}" accent={primary} rengiyle.
-Güçlü geometri — dolu blok veya diagonal şerit.
+viewBox="0 0 1080 1080". Zemin {bg}.
+Tagline'dan 2-3 kelime BÜYÜK (font-size 180-240): "{tagline[:35]}"
+font-weight="900", {text} rengi. Alt kısımda "{name_safe}" {primary} rengiyle.
+Güçlü renk bloğu veya diagonal şerit — {primary} veya {secondary} kullan.
 ===END===
 
 ===SVG:app2===
-viewBox="0 0 1080 1080". Farklı kompozisyon. Grid/pattern zemin.
-"{name}" büyük outline/transparent metin. Accent renk bloğu.
-Farklı hiyerarşi — konsept: "{concept[:60]}"
+viewBox="0 0 1080 1080". app1'den tamamen farklı kompozisyon.
+"{name_safe}" büyük stroke-only (fill="none", stroke="{primary}", stroke-width="8-12", font-size 180+).
+Arka planda tekrarlayan geometrik grid veya pattern. Renk aksan bloğu.
+Alt veya üst köşede konsept: "{concept[:50]}"
 ===END==="""
 
 
