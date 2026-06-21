@@ -3,8 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-// DEBUG: hangi Supabase URL'i kullanıyor?
+// DEBUG: hangi Supabase URL + key kullanıyor?
 const _DEBUG_URL = process.env.BG_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'NONE';
+const _DEBUG_KEY_SRC = process.env.BG_SERVICE_ROLE_KEY ? 'BG_SERVICE_ROLE_KEY' : (process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : 'NONE');
+const _DEBUG_KEY_HINT = (process.env.BG_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').slice(-8);
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.ADMIN_SECRET;
@@ -199,7 +201,7 @@ export async function GET(req: NextRequest) {
   const jobsForClient = jobsData.map(({ preview_html: _ph, ...rest }: any) => rest);
 
   return NextResponse.json({
-    _debug: { supabaseUrl: _DEBUG_URL, totalJobsRaw: jobsData.length },
+    _debug: { supabaseUrl: _DEBUG_URL, keySrc: _DEBUG_KEY_SRC, keyHint: _DEBUG_KEY_HINT, totalJobsRaw: jobsData.length },
     stats: {
       totalJobs,
       paidJobs,
