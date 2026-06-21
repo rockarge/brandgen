@@ -1,3 +1,4 @@
+// v2.1 — Brand Kit açma butonu + Preview (JPG) etiketi
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -189,6 +190,16 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
 
         {/* Actions */}
         <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+          {job.status === "done" && (
+            <a
+              href={`https://brandgen.no1a.com/api/brand-kit/${job.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ ...styles.actionBtn, background: "#1a1400", color: "#c9a84c", border: "1px solid #78350f" }}
+            >
+              🎨 Brand Kit'i Aç
+            </a>
+          )}
           {job.download_url && (
             <a href={job.download_url} target="_blank" rel="noopener noreferrer" style={styles.actionBtn}>
               ⬇ İndir
@@ -196,7 +207,7 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
           )}
           {job.preview_url && (
             <a href={job.preview_url} target="_blank" rel="noopener noreferrer" style={{ ...styles.actionBtn, background: "#1a2a1a", color: "#4ade80", border: "1px solid #14532d" }}>
-              👁 Preview
+              👁 Preview (JPG)
             </a>
           )}
           {job.stripe_session_id && (
