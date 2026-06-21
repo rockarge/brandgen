@@ -146,16 +146,17 @@ Font: {font_display}
 5 SVG tasarla:
 
 ===SVG:logo_primary===
-viewBox="0 0 800 280". Zemin {bg}. Marka adı "{name}" büyük/bold,
-negatif letter-spacing (-0.03 ile -0.06 arası). Metin rengi {text}.
-Accent {primary} ile 1-2 özgün geometrik detay (ince çizgi, köşe aksanı, küçük form).
+viewBox="0 0 800 280". Arka plan rengi ZORUNLU: {bg} — bunu değiştirme.
+Marka adı "{name}" büyük/bold, negatif letter-spacing (-0.03 ile -0.06 arası).
+Metin rengi {text}. Accent {primary} ile 1-2 geometrik detay.
 Logo konseptine uygun: {logo_concept or "minimal ve güçlü"}
+NOT: Arka planı primary veya accent renge boyama — sadece {bg} kullan.
 ===END===
 
 ===SVG:logo_icon===
 viewBox="0 0 320 320". "{name[0]}" baş harfi veya kısaltma.
-Zemin {bg}. Geometrik çerçeve veya form, accent={primary}.
-Metin {text}. Monogram sistemi — özgün, ayırt edici.
+Arka plan: {bg} (ZORUNLU — değiştirme). Geometrik çerçeve/form, accent={primary}.
+Metin {text}. Monogram — özgün, ayırt edici.
 ===END===
 
 ===SVG:logo_mono===
@@ -177,15 +178,57 @@ Farklı hiyerarşi — konsept: "{concept[:60]}"
 ===END==="""
 
 
-def _extract_svgs(raw: str) -> dict:
-    """Claude çıktısından SVG bloklarını çıkar, UTF-8 base64 encode et (Python yapıyor)."""
+def _force_svg_background(svg_str: str, bg_color: str) -> str:
+    """
+    SVG'nin arka planını bg_color ile garantile.
+    Sonnet ne renk seçerse seçsin, logo zemini her zaman sayfa bg'siyle eşleşir.
+    1) İlk <rect> fill'ini bg_color'a set et (varsa)
+    2) Yoksa: <svg> açılışından hemen sonra explicit background rect ekle
+    """
+    vb_match = re.search(r'viewBox=["\'](\S+)["\']', svg_str)
+    if not vb_match:
+        return svg_str
+
+    parts = vb_match.group(1).split()
+    if len(parts) == 4:
+        _, _, w, h = parts
+    else:
+        return svg_str
+
+    bg_rect = f'<rect width="{w}" height="{h}" fill="{bg_color}"/>'
+
+    # Mevcut ilk rect varsa fill'ini değiştir
+    first_rect = re.search(r'<rect([^/]*/?>)', svg_str)
+    if first_rect:
+        old = first_rect.group(0)
+        new = re.sub(r'fill="[^"]*"', f'fill="{bg_color}"', old)
+        if 'fill=' not in new:
+            new = new.replace('/>', f' fill="{bg_color}"/>')
+        svg_str = svg_str.replace(old, new, 1)
+    else:
+        # Hiç rect yok — svg tag'ından sonra ekle
+        svg_str = re.sub(r'(<svg[^>]*>)', r'\1\n  ' + bg_rect, svg_str, count=1)
+
+    return svg_str
+
+
+def _extract_svgs(raw: str, bg_color: str = "#0F0D0C") -> dict:
+    """
+    Claude çıktısından SVG bloklarını çıkar, UTF-8 base64 encode et.
+    logo_primary ve logo_icon için arka planı Python tarafında bg_color'a zorla —
+    Sonnet'in renk seçimine bakılmaksızın sayfa zeminiyle her zaman eşleşir.
+    """
     pattern = r'===SVG:(\w+)===([\s\S]*?)===END==='
     svgs = {}
+    # logo_mono şeffaf kalmalı — diğerleri zorlanır
+    force_bg_keys = {"logo_primary", "logo_icon", "app1", "app2"}
+
     for m in re.finditer(pattern, raw):
         key = m.group(1).strip()
         svg_raw = m.group(2).strip()
         if svg_raw.startswith('<svg'):
-            # Python UTF-8 base64 — hallüsinasyon yok, Türkçe karakterler sağlam
+            if key in force_bg_keys:
+                svg_raw = _force_svg_background(svg_raw, bg_color)
             b64 = base64.b64encode(svg_raw.encode('utf-8')).decode('ascii')
             svgs[key] = f"data:image/svg+xml;base64,{b64}"
         else:
@@ -214,7 +257,7 @@ def generate_html_preview(brief: dict) -> tuple:
         messages=[{"role": "user", "content": _build_svg_prompt(brief)}],
     )
     svg_raw = svg_response.content[0].text
-    svgs = _extract_svgs(svg_raw)
+    svgs = _extract_svgs(svg_raw, bg_color=brief["bg_color"])
 
     html_token_usage = {
         "input_tokens": svg_response.usage.input_tokens,
