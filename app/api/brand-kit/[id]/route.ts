@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
-
-const _BK_DEBUG_URL = process.env.BG_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'NONE';
-const _BK_DEBUG_KEY_SRC = process.env.BG_SERVICE_ROLE_KEY ? 'BG_SERVICE_ROLE_KEY' : (process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : 'NONE');
 
 export async function GET(
   req: NextRequest,
@@ -13,34 +9,37 @@ export async function GET(
   const { id } = params;
   if (!id) return new NextResponse("Job ID gerekli", { status: 400 });
 
-  const db = supabaseAdmin();
-  const { data, error } = await db
-    .from("jobs")
-    .select("preview_html, status")
-    .eq("id", id)
-    .single();
+  const url = process.env.BG_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  const key = process.env.BG_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-  const debugHeaders = {
-    "X-Debug-Supabase-URL": _BK_DEBUG_URL,
-    "X-Debug-Key-Src": _BK_DEBUG_KEY_SRC,
+  const resp = await fetch(
+    `${url}/rest/v1/jobs?id=eq.${id}&select=preview_html%2Cstatus`,
+    { headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/vnd.pgrst.object+json' } }
+  );
+
+  const httpStatus = resp.status;
+  let data: any = null;
+  try { data = await resp.json(); } catch {}
+
+  const debugH = {
+    "X-Debug-URL": url.substring(0,40),
+    "X-Debug-Key-Prefix": key.substring(0,30),
+    "X-Debug-Supabase-HTTP": String(httpStatus),
     "X-Debug-Data-Status": data?.status ?? "null",
     "X-Debug-Preview-Len": String(data?.preview_html?.length ?? "null"),
-    "X-Debug-Error": error ? JSON.stringify(error).substring(0,100) : "none",
+    "X-Debug-Supabase-Error": data?.code ?? data?.message ?? "none",
   };
 
-  if (error || !data) {
-    console.error(`[brand-kit] 404 — id=${id} error=${JSON.stringify(error)}`);
-    return new NextResponse("Bulunamad\u0131", { status: 404, headers: debugHeaders });
+  if (httpStatus !== 200 || !data || data.code) {
+    return new NextResponse("Supabase error", { status: 500, headers: debugH });
   }
 
-  console.log(`[brand-kit] id=${id} status=${data.status} preview_html_len=${data.preview_html?.length ?? "null"} supabase=${_BK_DEBUG_URL}`);
-
   if (data.status !== "done" || !data.preview_html) {
-    return new NextResponse("Hen\u00fcz haz\u0131r de\u011fil", { status: 202, headers: debugHeaders });
+    return new NextResponse("Hen\u00fcz haz\u0131r de\u011fil", { status: 202, headers: debugH });
   }
 
   return new NextResponse(data.preview_html, {
     status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", ...debugHeaders },
+    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", ...debugH },
   });
 }
