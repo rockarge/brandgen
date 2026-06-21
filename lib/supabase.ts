@@ -1,14 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-// NEXT_PUBLIC_* → build-time inline; SUPABASE_* → runtime fallback
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+// BG_* oneki: Vercel Supabase entegrasyon override'indan muaf (her zaman dogru proje)
+// SUPABASE_* fallback: Vercel entegrasyonu tarafindan yanlis projeye set edilmis olabilir
+const supabaseUrl     = process.env.BG_SUPABASE_URL      || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseAnonKey = process.env.BG_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Server-side (service role — API routes only)
 export const supabaseAdmin = () =>
-  createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  createClient(supabaseUrl, process.env.BG_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '', {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
