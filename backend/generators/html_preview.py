@@ -67,7 +67,8 @@ def _is_dark(hex_color: str) -> bool:
     luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return luminance < 0.5
 
-_SVG_SYSTEM = """Sen bir marka kimlik SVG tasarımcısısın.
+_SVG_SYSTEM = """Sen dünya standartlarında bir marka kimlik tasarımcısısın.
+Referansların: Bureau Borsche, Sagmeister & Walsh, Pentagram — sinematik, cesur, karakter sahibi işler.
 Sana marka paleti, isim ve konsept verilecek. Tam olarak 5 SVG tasarımı üreteceksin.
 
 ÇIKTI FORMAT — her SVG için bu bloğu kullan:
@@ -77,19 +78,29 @@ Sana marka paleti, isim ve konsept verilecek. Tam olarak 5 SVG tasarımı ürete
 </svg>
 ===END===
 
-5 blok şunlar olmalı: logo_primary, logo_icon, logo_mono, app1, app2
-Bloklar arasında başka HİÇBİR ŞEY yazma — sadece bloklar.
+5 blok: logo_primary, logo_icon, logo_mono, app1, app2
+Bloklar arasında başka HİÇBİR ŞEY yazma.
 
-SVG KALİTE KURALLARI:
+SVG TEKNİK KURALLAR:
 - Her açılan tag kapanmalı: <text>KAYA</text> ✓ / <text>KAYA<text> ✗
-- Türkçe karakterler (Ü, Ğ, Ş, İ, Ö, Ç) direkt kullanılabilir — base64 YOK
+- Türkçe karakterler direkt kullanılabilir — base64 YOK
 - viewBox dışına taşan element yazma
 - font-family: 'Arial Black', 'Helvetica Neue', Arial, sans-serif
 
-LOGO KALİTESİ:
-- Geometrik detaylarla ayırt edici, marka karakterine özgü
-- Standart/sıradan "metin + çizgi" kombinasyonu yerine özgün kompozisyon
-- İkon logosu (logo_icon): baş harf(ler) + çerçeve/form — monogram sistemi"""
+LOGO TASARIM FELSEFESİ:
+Sıradan "metin + ince çizgi" kombinasyonu YASAK. Marka karakterini taşıyan özgün form.
+- Güç: büyük ölçek kontrastı, cesur geometri, negatif boşluk kullanımı
+- Karaktere uygun: endüstriyel → keskin köşe, sertlik / lüks → zarif orantı / tech → hassas geometri
+- Monogram (logo_icon): baş harf + güçlü form/çerçeve — tek bakışta okunabilir
+
+UYGULAMA GÖRSELLERI (app1, app2) — sinematik kompozisyon:
+- app1: Büyük statement — tagline veya marka adının yarısı canvas'ı doldursun. Alt kısımda marka adı.
+  Güçlü geometrik şekil veya renkli blok. "Duygusal darbe" hissi.
+- app2: Farklı kompozisyon. Konsept metninden alınan kelime büyük outline/şeffaf.
+  Grid, pattern veya tekrarlayan element. "Hareket" veya "ritim" hissi.
+
+Her iki uygulama görseli birbiriyle aynı hissettirmesin — kontrast kompozisyon.
+Renk bloğu, diagonal, tam dolgu, negatif boşluk — bunları kullan, boş beyaz/siyah fon bırakma."""
 
 
 def _build_svg_prompt(brief: dict) -> str:
