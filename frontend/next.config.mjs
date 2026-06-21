@@ -1,11 +1,11 @@
 /** @type {import('next').NextConfig} */
-// cache-bust: 2026-06-21-v3 — webpack cache version override
 const nextConfig = {
-  generateBuildId: async () => "brandgen-v3-20260621",
-  webpack: (config) => {
-    // Force webpack filesystem cache invalidation
-    if (config.cache && typeof config.cache === "object") {
-      config.cache.version = "brandgen-v3-20260621";
+  webpack: (config, { dev }) => {
+    // Production build'de webpack filesystem cache'i kapat.
+    // Vercel build cache restore ettiğinde eski compiled chunk'lar
+    // reuse ediliyordu — bu tamamen engeller.
+    if (!dev) {
+      config.cache = false;
     }
     return config;
   },
