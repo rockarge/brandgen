@@ -1,0 +1,154 @@
+"""
+BrandGen — BrandBriefContract
+
+brand_brief.py (üretici) ile html_preview.py (tüketici) arasındaki sözleşme.
+
+KULLANIM:
+    from generators.brand_brief_contract import normalize_brief
+
+    # brand_brief.py çıktısını her zaman normalize et:
+    brief, tokens = generate_brand_brief(prompt, tier)
+    brief = normalize_brief(brief)
+
+    # html_preview.py içinde artık .get() gerekmez — tüm alanlar garantili:
+    brand_name = brief["brand_name"]   # KeyError yok
+    voice_we   = brief["voice_we"]     # boş liste dönerse de patlama yok
+
+KURAL:
+    Yeni alan eklenince:
+    1. DEFAULTS sözlüğüne ekle (default değerle)
+    2. _knowledge/brandgen-mimari.md §5 window.BRAND şemasını güncelle
+    3. html_preview.py'de ilgili yeri .get() yerine doğrudan kullan
+"""
+
+from typing import Any
+
+# ── Tüm alanlar ve default değerleri ──────────────────────────────────────────
+DEFAULTS: dict[str, Any] = {
+    # Kimlik
+    "brand_name":           "BRAND",
+    "tagline":              "",
+    "domain":               "",
+    "energy":               "cinematic",   # "cinematic" | "playful"
+
+    # Renkler
+    "primary_color":        "#C9A25A",
+    "secondary_color":      "#8B8B7A",
+    "accent_color":         None,          # None → secondary ile aynı
+    "bg_color":             "#0F0D0C",     # Sektöre özgü zemin — ASLA saf siyah/beyaz
+
+    # Tipografi
+    "font_display":         "Space Grotesk",
+    "font_body":            "Inter",
+    "font_meta":            "DM Mono",
+
+    # Logo
+    "logo_concept":         "",
+    "logo_versions":        [],
+
+    # Strateji — brand_brief.py Sonnet üretimi
+    "brand_story":          "",
+    "brand_story_preview":  "",
+    "brand_story_line2":    "",
+    "story_heading":        "",            # Manifesto başlığı — tagline değil
+    "concept_statement":    "",
+    "concept_body":         "",
+
+    # Ses & Ton
+    "voice_we":             ["", ""],
+    "voice_we_not":         ["", ""],
+    "mood_words":           [],
+
+    # Görsel dil
+    "visual_language":      "",
+
+    # Sosyal medya post metinleri (PIL generator için)
+    "social_post_1_caption": "",
+    "social_post_2_caption": "",
+
+    # Tier — pipeline tarafından eklenir
+    "tier":                 "free",
+
+    # Pipeline tarafından eklenen görsel base64'ler (opsiyonel)
+    # html_preview.py bu alanları window.BRAND'e taşır
+    "_card_front_b64":      "",   # PIL kartvizit ön — solo+
+    "_card_back_b64":       "",   # PIL kartvizit arka — solo+
+    "_web_hero_b64":        "",   # Web hero mockup — starter+
+    "_ig_grid_b64":         "",   # Instagram grid — starter+
+    "_letterhead_b64":      "",   # Letterhead — studio+
+}
+
+# Tier'a göre hangi alanların HTML brand kit'e dahil edileceği
+TIER_FEATURES = {
+    "free":         ["applications"],
+    "solo":         ["applications", "businessCard"],
+    "single":       ["applications", "businessCard"],
+    "starter":      ["applications", "businessCard", "instagramGrid", "webHero"],
+    "starter_pack": ["applications", "businessCard", "instagramGrid", "webHero"],
+    "studio":       ["applications", "businessCard", "instagramGrid", "webHero", "letterhead"],
+    "studio_pack":  ["applications", "businessCard", "instagramGrid", "webHero", "letterhead"],
+    "pro":          ["applications", "businessCard", "instagramGrid", "webHero", "letterhead"],
+    "pro_pack":     ["applications", "businessCard", "instagramGrid", "webHero", "letterhead"],
+    "agency":       ["applications", "businessCard", "instagramGrid", "webHero", "letterhead"],
+}
+
+
+def normalize_brief(raw: dict) -> dict:
+    """
+    brand_brief.py çıktısını normalize et:
+    - Eksik alanları DEFAULTS ile doldur
+    - Tip uyumsuzluklarını düzelt (örn. string gelmesi gereken yerde None)
+    - Accent color: None ise secondary ile aynı yap
+
+    Dönüş: tüm alanları garantili brief dict
+    """
+    result = {**DEFAULTS, **raw}
+
+    # accent_color: None → secondary
+    if not result.get("accent_color"):
+        result["accent_color"] = result["secondary_color"]
+
+    # energy normalization
+    energy = str(result.get("energy", "cinematic")).lower()
+    result["energy"] = "playful" if "playful" in energy else "cinematic"
+
+    # bg_color: raw dict'te yoksa (eski format / Sonnet üretmedi) energy'e göre default koy
+    if "bg_color" not in raw or not raw.get("bg_color"):
+        if result["energy"] == "playful":
+            result["bg_color"] = "#FAFAFA"
+        else:
+            result["bg_color"] = "#0F0D0C"
+
+    # voice_we / voice_we_not: string geldiyse listeye çevir
+    for key in ("voice_we", "voice_we_not"):
+        val = result.get(key)
+        if isinstance(val, str):
+            result[key] = [val, ""]
+        elif not isinstance(val, list):
+            result[key] = ["", ""]
+        elif len(result[key]) < 2:
+            result[key] = (result[key] + ["", ""])[:2]
+
+    # mood_words: string geldiyse listeye çevir
+    if isinstance(result.get("mood_words"), str):
+        result["mood_words"] = [w.strip() for w in result["mood_words"].split(",")]
+
+    # story_heading: boşsa tagline'dan türet
+    if not result.get("story_heading"):
+        result["story_heading"] = result.get("tagline", "")
+
+    # social_post captions: boşsa tagline'dan al
+    if not result.get("social_post_1_caption"):
+        result["social_post_1_caption"] = result.get("tagline", result["brand_name"])
+
+    return result
+
+
+def tier_features(tier: str) -> list[str]:
+    """Bu tier'ın HTML brand kit'te hangi bölümlere sahip olduğunu döner."""
+    return TIER_FEATURES.get(tier, TIER_FEATURES["free"])
+
+
+def has_feature(brief: dict, feature: str) -> bool:
+    """Brief'in tier'ı bu feature'ı destekliyor mu?"""
+    return feature in tier_features(brief.get("tier", "free"))

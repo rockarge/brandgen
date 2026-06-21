@@ -1,4 +1,15 @@
 """
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  DOKUNMA BÖLGESİ: BACKEND / GENERATOR                                      ║
+║  Deploy: deploy_backend.command (çift tıkla)                                ║
+║  Etkilediği katman: Fly.io backend — sadece bu katmanı değiştirir           ║
+║                                                                              ║
+║  BU DOSYAYA Frontend (Next.js/Vercel) değişikliği sırasında DOKUNMA.       ║
+║  Dashboard veya admin UI düzenlerken bu dosyaya DOKUNMA.                    ║
+║  window.BRAND şemasına yeni alan eklenirse: brand_brief_contract.py'yi      ║
+║  ve brandgen-mimari.md §5'i de güncelle.                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
 BrandGen HTML Kit v2 — İki Aşamalı Pipeline
 
 Aşama 1 (Python): window.BRAND config'ini brief verisinden doldur.
@@ -18,10 +29,43 @@ import os
 import re
 import json
 import base64
+import colorsys
 
 import anthropic
 
+from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
+
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
+
+
+def _lighten_hex(hex_color: str, amount: int = 18) -> str:
+    """Hex rengi RGB olarak ayrıştır, her kanalı amount kadar artır (surface türetme)."""
+    hex_color = hex_color.lstrip("#")
+    if len(hex_color) == 3:
+        hex_color = "".join(c * 2 for c in hex_color)
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    r, g, b = min(r + amount, 255), min(g + amount, 255), min(b + amount, 255)
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
+def _darken_hex(hex_color: str, amount: int = 12) -> str:
+    """Hex rengi RGB olarak ayrıştır, her kanalı amount kadar azalt."""
+    hex_color = hex_color.lstrip("#")
+    if len(hex_color) == 3:
+        hex_color = "".join(c * 2 for c in hex_color)
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    r, g, b = max(r - amount, 0), max(g - amount, 0), max(b - amount, 0)
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
+def _is_dark(hex_color: str) -> bool:
+    """Rengin koyu mu açık mı olduğunu luminance ile belirle."""
+    hex_color = hex_color.lstrip("#")
+    if len(hex_color) == 3:
+        hex_color = "".join(c * 2 for c in hex_color)
+    r, g, b = int(hex_color[0:2], 16) / 255, int(hex_color[2:4], 16) / 255, int(hex_color[4:6], 16) / 255
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return luminance < 0.5
 
 _SVG_SYSTEM = """Sen bir marka kimlik SVG tasarımcısısın.
 Sana marka paleti, isim ve konsept verilecek. Tam olarak 5 SVG tasarımı üreteceksin.
@@ -56,9 +100,15 @@ def _build_svg_prompt(brief: dict) -> str:
     energy = str(brief.get("energy", "cinematic")).lower()
 
     if "playful" in energy:
-        bg, text = "#FFFFFF", "#1A1A1A"
+        bg = brief.get("bg_color", "#FFFFFF")
+        # playful için bg açık tonsa beyaz/açık metin mantıksız — kontrol et
+        if not _is_dark(bg):
+            text = "#1A1A1A"
+        else:
+            text = "#F5F0E8"
     else:
-        bg, text = "#0A0909", "#F2EDE4"
+        bg = brief.get("bg_color", "#0F0D0C")
+        text = "#F2EDE4" if _is_dark(bg) else "#1A1A1A"
 
     tagline = brief.get("tagline", "")
     concept = brief.get("concept_statement", "")
@@ -139,6 +189,9 @@ def generate_html_preview(brief: dict) -> tuple:
     """
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
+    # Sözleşme: brief'i normalize et — eksik alanlar default değeriyle gelir
+    brief = normalize_brief(brief)
+
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
         template = f.read()
 
@@ -158,20 +211,33 @@ def generate_html_preview(brief: dict) -> tuple:
     }
 
     # ── Aşama 1: Python ile window.BRAND doldur ────────────────────────────────
-    energy = str(brief.get("energy", "cinematic")).lower()
-    energy = "playful" if "playful" in energy else "cinematic"
+    # normalize_brief() garantili — .get() + default'a gerek yok
+    energy    = brief["energy"]          # "cinematic" | "playful"
+    primary   = brief["primary_color"]
+    secondary = brief["secondary_color"]
+    accent2   = brief["accent_color"]   # normalize_brief → secondary ile aynı yapıldı
 
-    primary  = brief.get("primary_color", "#C9A25A")
-    secondary = brief.get("secondary_color", "#8B8B7A")
-    accent2  = brief.get("accent_color") or secondary
+    bg = brief["bg_color"]
+    dark_bg = _is_dark(bg)
 
     if energy == "playful":
-        bg, surface, text, muted = "#FFFFFF", "#F5F5F5", "#1A1A1A", "#666666"
+        if dark_bg:
+            surface = _lighten_hex(bg, 15)
+            text, muted = "#F5F0E8", "#A89F94"
+        else:
+            surface = _darken_hex(bg, 12)
+            text, muted = "#1A1A1A", "#666666"
     else:
-        bg, surface, text, muted = "#0A0909", "#141210", "#F2EDE4", "#7A756C"
+        # cinematic — koyu zemin bekleniyor ama brief'ten geldi
+        if dark_bg:
+            surface = _lighten_hex(bg, 12)
+            text, muted = "#F2EDE4", "#7A756C"
+        else:
+            surface = _darken_hex(bg, 12)
+            text, muted = "#1A1A1A", "#555555"
 
-    font_display = brief.get("font_display", "Space Grotesk")
-    font_body    = brief.get("font_body", "Inter")
+    font_display = brief["font_display"]
+    font_body    = brief["font_body"]
 
     def _slug(n): return n.strip().replace(" ", "+")
     gf_url = (
@@ -181,17 +247,17 @@ def generate_html_preview(brief: dict) -> tuple:
         f"&display=swap"
     )
 
-    brand_name = brief.get("brand_name", "BRAND")
-    tagline    = brief.get("tagline", "")
+    brand_name = brief["brand_name"]
+    tagline    = brief["tagline"]
 
     # Strateji — brief'ten direkt al (brand_brief.py Sonnet'iyle üretildi)
-    concept_statement = brief.get("concept_statement", "")
-    brand_story       = brief.get("brand_story", "")
-    brand_story_prev  = brief.get("brand_story_preview", "")
-    brand_story_line2 = brief.get("brand_story_line2", "")
-    voice_we          = brief.get("voice_we", ["", ""])
-    voice_we_not      = brief.get("voice_we_not", ["", ""])
-    mood_words        = brief.get("mood_words", [])
+    concept_statement = brief["concept_statement"]
+    brand_story       = brief["brand_story"]
+    brand_story_prev  = brief["brand_story_preview"]
+    brand_story_line2 = brief["brand_story_line2"]
+    voice_we          = brief["voice_we"]
+    voice_we_not      = brief["voice_we_not"]
+    mood_words        = brief["mood_words"]
 
     # Story body: ilk iki paragraf
     if brand_story_prev:

@@ -1,11 +1,23 @@
 """
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  DOKUNMA BÖLGESİ: BACKEND / GENERATOR                                      ║
+║  Deploy: deploy_backend.command (çift tıkla)                                ║
+║  Etkilediği katman: Fly.io backend — sadece bu katmanı değiştirir           ║
+║                                                                              ║
+║  BU DOSYAYA Frontend (Next.js/Vercel) değişikliği sırasında DOKUNMA.       ║
+║  Frontend deploy: clear_cache_and_deploy.command                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
 Claude API ile brand brief üretimi.
 Kullanıcı promptu → structured brand brief JSON.
+Çıktı: normalize_brief() ile garantili BrandBriefContract alanları.
 """
 
 import json
 import os
 import anthropic
+
+from generators.brand_brief_contract import normalize_brief  # sözleşme normalizer
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
@@ -36,25 +48,39 @@ TEMEL YAKLAŞIM:
 Önce markayı anla: sektör, hedef kitle, duygusal vaat, rekabet ortamı.
 Sonra o markaya uygun estetik sistemi seç. Herkese aynı şablonu giydirme.
 
-RENK KURALI — ÇOK ÖNEMLİ:
-- Avant-garde/lüks/B2B → siyah (#0A0A0A) + off-white (#F1EBE1) ağırlıklı, maksimum 1 accent
-- Çocuk/eğlence/yiyecek-içecek/spor → CANLI, doygun renkler. Marka karakterine uygun
-  boldpalette kullan. Siyah zorunlu değil — beyaz veya açık renk zemin daha iyi işleyebilir.
-- Sağlık/organik/doğa → toprak tonları, yeşiller, soft palettes
-- Tech/SaaS → temiz, nötr, 1-2 vurgu rengi
-Renk seçimini MARKAYA GÖRE yap, default'a kaçma.
+RENK KURALI — KESİN:
+Saf siyah (#000000) ve saf beyaz (#FFFFFF) DEFAULT'TUR — yani başarısızlıktır.
+Her marka kendi tonunu almalı. Örnekler:
+- İş güvenliği/endüstri → koyu orman yeşili, antrasit, koyu petrol
+- Finans/hukuk → derin lacivert, koyu mürekkep, derin kırmızı-siyah
+- Lüks/premium → sıcak siyah (#0A0808), derin kahve (#1A0F0A), koyu yeşim
+- Sağlık/medikal → koyu teal, koyu zeytin, derin mavi-yeşil
+- Çocuk/eğlence → beyaz zemin + canlı, doygun accent'ler
+- Gıda/içecek → sektörün renk dilinden al (kahve → koyu kahve+altın, organik → yeşil+toprak)
+- Tech/SaaS → koyu lacivert, derin gri-mavi, koyu slate
+Kural: bg_color, primary, secondary renkleri birbirini tamamlamalı.
+primary_color = marka accent'i (logo, vurgu, CTA).
+secondary_color = tamamlayıcı/ikincil ton.
+bg_color = sayfa/uygulama zemini — sektöre özgü koyu veya açık ton, ASLA #000000 veya #FFFFFF.
 
-TİPOGRAFİ:
-Avant-garde → Big Shoulders Display / DM Sans / DM Mono
-Çocuk/eğlenceli → Fredoka One / Nunito / Poppins
-Lüks/premium → Cormorant Garamond / Optima / Futura
-Organik/el yapımı → Playfair Display / Lato
-Tech → Inter / Space Grotesk / IBM Plex
+TİPOGRAFİ — sektöre göre seç, hepsine aynı fontu verme:
+Güvenlik/endüstri/askeri → Big Shoulders Display, Bebas Neue, Barlow Condensed
+Çocuk/eğlenceli → Fredoka One, Nunito, Poppins
+Lüks/premium/moda → Cormorant Garamond, Playfair Display, Optima
+Organik/el yapımı/doğa → Playfair Display, Lora, DM Serif Display
+Tech/SaaS/fintech → Inter, Space Grotesk, IBM Plex Sans
+Kurumsal/B2B → DM Sans, Source Sans Pro, Raleway
 
 KOMPOZİSYON:
 - Büyük/küçük ölçek kontrastı — güçlü hiyerarşi
 - Ana harf veya şekil canvas'ı keser/zorlar
 - Bold ama markanın karakteriyle uyumlu
+
+KALİTE KAPISI — çıktı üretmeden önce kontrol et:
+1. SWAP TEST: concept_statement başka bir markaya da uyar mı? Uyguluyorsa yeniden yaz.
+2. SEKTÖR TUZAĞI: voice_we_not örnekleri bu sektörün tam klişesi mi? Jenerik korporat dil değil.
+3. STORY HEADING: tagline'ın kopyası değil, gerilim veya dönüşüm cümlesi mi?
+4. RENK: bg_color saf siyah/beyaz mı? → Sektöre özgü koy.
 
 JSON formatında yanıt ver. Başka hiçbir şey yazma."""
 
@@ -68,9 +94,10 @@ Renk, tipografi ve estetik seçimlerini marka karakterine göre yap — default 
   "tagline": "Max 6 kelime, vurucu slogan — markaya özel ton ve ses",
   "brand_story": "3-4 paragraf — marka felsefesi, karakter, pozisyon, hedef kitle bağlantısı",
   "brand_story_preview": "Sadece ilk paragraf",
-  "primary_color": "#XXXXXX  ← marka karakterine uygun ana renk",
-  "secondary_color": "#XXXXXX  ← ana renkle uyumlu ikincil renk",
+  "primary_color": "#XXXXXX  ← marka accent'i (logo, CTA, vurgu)",
+  "secondary_color": "#XXXXXX  ← ana renkle uyumlu ikincil ton",
   "accent_color": "#XXXXXX veya null  ← isteğe bağlı 3. vurgu rengi",
+  "bg_color": "#XXXXXX  ← sektöre özgü zemin rengi, ASLA #000000 veya #FFFFFF",
   "font_display": "Marka karakterine uygun display font adı",
   "font_body": "Okunabilir body font adı",
   "font_meta": "Meta/label font adı",
@@ -129,4 +156,6 @@ def generate_brand_brief(prompt: str, tier: str = "free") -> tuple[dict, dict]:
             raw = raw[4:]
     raw = raw.strip().rstrip("`").strip()
 
-    return json.loads(raw), token_usage
+    parsed = json.loads(raw)
+    # Sözleşme: eksik alanları default ile doldur, tip uyumsuzluklarını düzelt
+    return normalize_brief(parsed), token_usage
