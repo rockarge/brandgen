@@ -74,29 +74,32 @@ export async function GET(req: NextRequest) {
 
   const db = supabaseAdmin();
 
-  // Jobs — son 200 (supabase-js)
-  const { data: jobs, error: jobsErr } = await db
-    .from("jobs")
-    .select("id, prompt, status, paid, tier, ai_model, stripe_session_id, created_at, expires_at, error, preview_url, download_url, brand_story, brand_story_preview, user_agent, referrer, input_tokens, output_tokens")
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  if (jobsErr) {
-    return NextResponse.json({ error: jobsErr.message, errCode: jobsErr.code, errDetails: jobsErr.details }, { status: 500 });
-  }
-
-  // DEBUG: supabase-js vs raw fetch karşılaştır
+  // Jobs — supabase-js bazı yeni satırları atladığı için raw fetch kullanıyoruz
+  // (brand-kit route'unda aynı sorun yaşandı, raw fetch ile çözüldü)
   const _supabaseUrl = process.env.BG_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
   const _serviceKey  = process.env.BG_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  let _rawCount = -1;
+
+  const JOBS_COLS = "id,prompt,status,paid,tier,ai_model,stripe_session_id,created_at,expires_at,error,preview_url,download_url,brand_story,brand_story_preview,user_agent,referrer,input_tokens,output_tokens";
+  let jobs: any[] | null = null;
+  let jobsErr: { message: string } | null = null;
   try {
-    const rawResp = await fetch(
-      `${_supabaseUrl}/rest/v1/jobs?select=id&limit=300`,
-      { headers: { apikey: _serviceKey, Authorization: `Bearer ${_serviceKey}`, Prefer: 'count=exact' } }
+    const rawJobsResp = await fetch(
+      `${_supabaseUrl}/rest/v1/jobs?select=${JOBS_COLS}&order=created_at.desc&limit=200`,
+      { headers: { apikey: _serviceKey, Authorization: `Bearer ${_serviceKey}`, "Cache-Control": "no-store" }, cache: "no-store" }
     );
-    const cr = rawResp.headers.get('content-range') ?? '';
-    _rawCount = parseInt(cr.split('/')[1] ?? '-1', 10);
-  } catch (_e) { _rawCount = -2; }
+    if (!rawJobsResp.ok) {
+      jobsErr = { message: `Raw fetch error: ${rawJobsResp.status}` };
+    } else {
+      jobs = await rawJobsResp.json();
+    }
+  } catch (e: any) {
+    jobsErr = { message: String(e) };
+  }
+
+  if (jobsErr) {
+    return NextResponse.json({ error: jobsErr.message }, { status: 500 });
+  }
+  const _rawCount = jobs?.length ?? -1;
 
   // Credits tablosu
   const { data: credits, error: creditsErr } = await db
