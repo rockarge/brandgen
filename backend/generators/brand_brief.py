@@ -262,7 +262,7 @@ Bu markayı analiz et. Önce 4 katmanlı zihinsel süreçten geç (Situation →
   "font_display": "Sektör karakterine uygun display font",
   "font_body": "Okunabilir body font",
   "font_meta": "Meta/label font (DM Mono, JetBrains Mono, IBM Plex Mono gibi)",
-  "logo_concept": "Logo DNA'sı — harf/form seçimi, kompozisyon mantığı, neden bu marka için doğru",
+  "logo_concept": "4 zorunlu element, her biri 1 cümle: (1) GÖRSEL METAFOR — marka özünü temsil eden beklenmedik ama doğru sembol (Apple elması gibi — hem bilgi hem yasak hem Newton, tek formda); (2) PRİMİTİF FORM — bu metaforu max 3 geometrik eleman ile nasıl ifade edersin, tek cümle; (3) NEGATİF ALAN — hangi boşluk/kesik anlam taşır (FedEx okunu veya Apple ısırığını rehber al — olmayan şey anlam verir); (4) SWAP ENGELI — sadece bu markaya ait, başka hiçbir markaya konamayacak özgün detay. YASAK: 'harf + şekil', 'monogram', 'sade ve modern' gibi jenerik cümleler.",
   "logo_versions": [
     {{"version": "primary", "description": "Yatay format açıklaması"}},
     {{"version": "icon", "description": "Monogram/ikon format"}},
@@ -309,8 +309,9 @@ tagline: "{tagline}"
 voice_we_not_1: "{voice_we_not_1}"
 voice_we_not_2: "{voice_we_not_2}"
 brand_story_preview: "{brand_story_preview}"
+logo_concept: "{logo_concept}"
 
-─── 4 KALİTE KAPISI ───
+─── 5 KALİTE KAPISI ───
 
 KAPI 1 — SWAP TEST (concept_statement):
 Soru: Bu cümle, aynı sektördeki başka bir markaya da uyar mı?
@@ -336,11 +337,17 @@ Soru: İlk paragraf insan içgörüsü veya kategorinin sorunu mu? Marka adı ge
 ✗ "XYZ Şirketi iş güvenliği alanında..." → ürün tanımı
 ✓ "Her sabah işe gidenlerin büyük çoğunluğu eve dönüp dönmeyeceğini düşünmez." → insan gerçeği
 
+KAPI 5 — LOGO KONSEPTİ (logo_concept):
+Soru: Bu logo_concept 4 elementi içeriyor mu? (1) görsel metafor, (2) primitif form, (3) negatif alan, (4) swap engeli.
+Eksik veya jenerikse → BAŞARISIZ. Yeniden yaz: Apple ısırığı ve FedEx oku standardında, 4 elementin tamamını içeren özgün brief.
+✗ "Modern bir font ile marka adı, arka planda geometrik şekil" → jenerik, herhangi bir markaya uyar
+✓ "Metafor: Anlık karar anı — bir düğmeye basma hareketi; Form: diagonal kesik çizgi Ş harfini ikiye böler (2 eleman); Negatif alan: kesik içinde gizli ok, ileriyi işaret eder; Swap engeli: sadece Ş'nin dekonstrüksiyonu bu markaya ait" → özgün, uygulanabilir
+
 ─── ÇIKTI FORMATI ───
 Sadece başarısız alanlar için JSON döndür. Örnek:
 {{
   "concept_statement": "Yeniden yazılmış versiyon",
-  "story_heading": "Yeniden yazılmış başlık"
+  "logo_concept": "Yeniden yazılmış logo konsepti"
 }}
 Tüm kapılar geçtiyse: {{}}"""
 
@@ -379,6 +386,7 @@ def critique_brief(brief: dict, prompt: str, studio: dict) -> tuple[dict, dict]:
         voice_we_not_1=vwn1,
         voice_we_not_2=vwn2,
         brand_story_preview=brief.get("brand_story_preview", "")[:300],  # token limiti
+        logo_concept=brief.get("logo_concept", "")[:400],  # token limiti
     )
 
     message = client.messages.create(

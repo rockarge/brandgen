@@ -171,7 +171,7 @@ def _build_svg_prompt(brief: dict) -> str:
 
     tagline_words = [w for w in tagline.split() if w][:4]
     max_tagline_word_len = max((len(w) for w in tagline_words), default=8)
-    max_font_app1 = min(220, int(900 / (max_tagline_word_len * 0.65)))  # app1: 1080px - margin
+    max_font_app1 = min(160, int(900 / (max_tagline_word_len * 0.65)))  # app1: 1080px - margin, 160px hard cap (kısa kelimeler taşmasın)
 
     # Studio DNA inject — hangi stüdyo atandıysa o stüdyonun tasarım dilini ver
     studio_dna = brief.get("studio_dna", {})
