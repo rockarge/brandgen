@@ -1,0 +1,19 @@
+{
+  "framework": "nextjs",
+  "regions": ["fra1"],
+  "buildCommand": "rm -rf .next/cache && npm run build",
+  "headers": [
+    {
+      "source": "/api/webhook",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "https://brandgen.no1a.com"
+  }
+}
