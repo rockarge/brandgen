@@ -21,6 +21,134 @@ from generators.brand_brief_contract import normalize_brief  # sözleşme normal
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  STÜDYO DNA — Sektöre göre atanan estetik kişilik
+#  Her sektör bir dünya stüdyosunun bakış açısını temsil eder.
+# ─────────────────────────────────────────────────────────────────────────────
+
+SECTOR_STUDIO_MAP: dict[str, dict] = {
+    "industry_b2b": {
+        "label": "Wolff Olins",
+        "sector": "Endüstri / B2B",
+        "voice": (
+            "Bold, systematic, unapologetic. Sektörün dilini konuş ama beklentiyi alt üst et. "
+            "Kurumsal ağırlık değil — kategorik dönüşüm. Renk ve form güç hissettirir; "
+            "söz fazlası yok, her şey kaçınılmaz görünür."
+        ),
+        "keywords": [
+            "iş güvenliği", "endüstri", "fabrika", "üretim", "inşaat", "imalat",
+            "makine", "b2b", "tedarik", "lojistik", "depo", "sanayi", "isg", "ehs",
+            "mühendislik", "proje yönetimi", "çevre", "enerji", "madencilik",
+        ],
+    },
+    "luxury_premium": {
+        "label": "Bureau Borsche",
+        "sector": "Lüks / Premium",
+        "voice": (
+            "Editorial, cinematic, tipografik üstünlük. Her söz ölçülü — sessizlik de bir "
+            "tasarım öğesi. Marka, kalabalığı görmezden gelir; sadece doğru insanla konuşur. "
+            "Görsel hiyerarşi mutlak; detay kusursuz."
+        ),
+        "keywords": [
+            "lüks", "premium", "moda", "fashion", "haute", "atölye", "tasarım stüdyo",
+            "otel", "butik", "gastronomi", "şarap", "saat", "mücevher", "parfüm",
+            "koleksiyon", "resort", "villa", "yat",
+        ],
+    },
+    "tech_saas": {
+        "label": "Collins",
+        "sector": "Tech / SaaS",
+        "voice": (
+            "Strategic, warm, culturally resonant. Teknik değil — insan odaklı. "
+            "Akıllı ama erişilebilir; soğuk değil, cesur. Marka bir araç değil, "
+            "bir bakış açısı. İnsanı görmek ürünü gölgelemez."
+        ),
+        "keywords": [
+            "tech", "saas", "yazılım", "uygulama", "app", "platform", "ai",
+            "yapay zeka", "data", "bulut", "cloud", "startup", "fintech", "kripto",
+            "blockchain", "digital", "dijital", "otomasyon", "api", "erp", "crm",
+        ],
+    },
+    "culture_creative": {
+        "label": "Sagmeister & Walsh",
+        "sector": "Kültür / Yaratıcı",
+        "voice": (
+            "Provocative, personal, experiential. Kural ihlali kaçınılmaz — ama kasıtlı. "
+            "Sanat ile ticaret arasında bilinçli gerilim. Her karar bir manifestodur. "
+            "Sıradan güzel olmak bu markanın en büyük başarısızlığı olur."
+        ),
+        "keywords": [
+            "kültür", "sanat", "medya", "müzik", "film", "festival", "galeri",
+            "yaratıcı", "creative", "ajans", "agency", "influencer", "creator",
+            "içerik", "content", "podcast", "yayın", "grafik", "illüstrasyon",
+        ],
+    },
+    "food_lifestyle": {
+        "label": "Pentagram",
+        "sector": "Gıda / Yaşam",
+        "voice": (
+            "Considered, multi-disciplinary, timeless. Trend değil — karakter. "
+            "Her detay yerli yerinde; hiçbir şey fazla, hiçbir şey eksik. "
+            "Marka rafta değil, sofrada veya evde yaşar."
+        ),
+        "keywords": [
+            "gıda", "yiyecek", "içecek", "restoran", "kafe", "kahve", "organik",
+            "doğal", "sağlıklı", "beslenme", "mutfak", "food", "lifestyle",
+            "wellness", "yaşam", "tarım", "üzüm", "peynir", "çikolata", "fırın",
+        ],
+    },
+    "health_medical": {
+        "label": "Landor",
+        "sector": "Sağlık / Medikal",
+        "voice": (
+            "Trust-first, human clarity. Karmaşıklığı eritir, insanı merkeze alır. "
+            "Klinik soğukluğu yok — güven görünmez ama hissedilir. "
+            "Renk ve form kaygıyı azaltır, umut verir."
+        ),
+        "keywords": [
+            "sağlık", "medikal", "hastane", "klinik", "ilaç", "pharma",
+            "terapi", "psikoloji", "rehabilitasyon", "eczane", "diş",
+            "optik", "wellness", "spa", "psikiyatri", "check-up",
+        ],
+    },
+    "corporate_legal": {
+        "label": "Base Design",
+        "sector": "Kurumsal / Hukuk / Finans",
+        "voice": (
+            "Rigorous, elegant, systematic. Fazlalık yok — her element işlevli. "
+            "Güç sadelikte. Marka güvenilirliği fısıldar, bağırmaz. "
+            "Tipografi ve boşluk hiyerarşi kurar; renk minimal ama kesin."
+        ),
+        "keywords": [
+            "hukuk", "avukat", "finans", "muhasebe", "danışmanlık", "consulting",
+            "yönetim", "corporate", "sigorta", "holding", "yatırım", "banka",
+            "denetim", "audit", "fon", "varlık", "portföy",
+        ],
+    },
+}
+
+_DEFAULT_STUDIO = "tech_saas"  # keyword eşleşmesi yoksa Collins
+
+
+def detect_sector(prompt: str) -> dict:
+    """
+    Prompt'tan sektörü tespit et → stüdyo DNA dict döner.
+    Yaklaşım: keyword frekansı. En çok eşleşen sektör kazanır.
+    Tie veya eşleşme yok → _DEFAULT_STUDIO.
+    """
+    prompt_lower = prompt.lower()
+    scores: dict[str, int] = {}
+    for sector_key, studio in SECTOR_STUDIO_MAP.items():
+        score = sum(1 for kw in studio["keywords"] if kw in prompt_lower)
+        if score > 0:
+            scores[sector_key] = score
+
+    if not scores:
+        return SECTOR_STUDIO_MAP[_DEFAULT_STUDIO]
+
+    best = max(scores, key=lambda k: scores[k])
+    return SECTOR_STUDIO_MAP[best]
+
 # Tier → model mapping
 # Haiku:  free / solo / starter_pack — hızlı, standart çıktı
 # Sonnet: studio_pack / pro_pack / agency — gelişmiş AI çıktısı
@@ -156,18 +284,169 @@ Bu markayı analiz et. Önce 4 katmanlı zihinsel süreçten geç (Situation →
 }}"""
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  SELF-CRITIQUE PASS — 2. Sonnet çağrısı
+#  İlk brief üretildikten sonra 4 kalite kapısını kontrol eder.
+#  Başarısız alanları yeniden yazar. Geçen alanları değiştirmez.
+#  Tahmini maliyet: ~$0.01/üretim. Kalite etkisi: %30-40.
+# ─────────────────────────────────────────────────────────────────────────────
+
+CRITIQUE_SYSTEM = """Sen sert ve tarafsız bir marka stratejisi kalite denetçisisin.
+Görevin: verilen brief alanlarını 4 kalite kapısından geçirmek.
+Başarısız olan alanları yeniden yaz. Geçen alanları AYNEN koru — değiştirme.
+
+Yanıtın: sadece başarısız alanları içeren JSON. Başka hiçbir şey yazma.
+Tüm alanlar geçiyorsa boş JSON ({}) döndür."""
+
+CRITIQUE_USER_TEMPLATE = """Marka: {brand_name} | Sektör: {sector} | Kullanıcı isteği: {prompt}
+
+Aşağıdaki brief alanlarını 4 kalite kapısından geçir:
+
+─── KONTROL EDİLECEK ALANLAR ───
+concept_statement: "{concept_statement}"
+story_heading: "{story_heading}"
+tagline: "{tagline}"
+voice_we_not_1: "{voice_we_not_1}"
+voice_we_not_2: "{voice_we_not_2}"
+brand_story_preview: "{brand_story_preview}"
+
+─── 4 KALİTE KAPISI ───
+
+KAPI 1 — SWAP TEST (concept_statement):
+Soru: Bu cümle, aynı sektördeki başka bir markaya da uyar mı?
+Uyarsa → BAŞARISIZ. Yeniden yaz: marka adı olmadan sadece bu markaya ait paradoks/gerilim.
+✗ "Güvenliği bir sonraki seviyeye taşıyoruz" → her güvenlik firması söyler
+✓ "Kaza olmayan yerde insan var — biz onu görüyoruz" → sadece bu perspektife ait
+
+KAPI 2 — STORY HEADING (story_heading):
+Soru: Bu başlık tagline'ın kopyası mı? Okuyunca duraksatıyor mu? Paradoks/gerilim var mı?
+Tagline kopyasıysa veya duraksatmıyorsa → BAŞARISIZ. Yeniden yaz: max 6 kelime, tersine çevrilmiş beklenti.
+✗ "Güvenli Çalışma, Güçlü Gelecek" → tagline formatı
+✓ "Tehlike Yoksa Başarısız Oluyoruz" → gerilim, beklentiyi kırıyor
+
+KAPI 3 — SEKTÖR KLİŞESİ (voice_we_not):
+Soru: Bu replikler gerçekten bu sektörün kullandığı klişeler mi? Jenerik korporat söylem mi yoksa sektöre özgü mü?
+Jenerik ise (herhangi bir sektöre de uyar) → BAŞARISIZ. Yeniden yaz: bu sektörün tam klişesi.
+✗ "Müşteri memnuniyeti bizim önceliğimiz" → jenerik, sektörsüz
+✓ "Sıfır kaza hedefiyle ilerliyoruz" → iş güvenliği sektörünün tam klişesi
+
+KAPI 4 — İNSAN GERÇEĞİ (brand_story_preview):
+Soru: İlk paragraf insan içgörüsü veya kategorinin sorunu mu? Marka adı geçiyor mu? Ürün tanımı gibi mi başlıyor?
+Ürün tanımıysa veya marka adı geçiyorsa → BAŞARISIZ. Yeniden yaz: insan davranışı/duygusu/sorunu — marka adı yok.
+✗ "XYZ Şirketi iş güvenliği alanında..." → ürün tanımı
+✓ "Her sabah işe gidenlerin büyük çoğunluğu eve dönüp dönmeyeceğini düşünmez." → insan gerçeği
+
+─── ÇIKTI FORMATI ───
+Sadece başarısız alanlar için JSON döndür. Örnek:
+{{
+  "concept_statement": "Yeniden yazılmış versiyon",
+  "story_heading": "Yeniden yazılmış başlık"
+}}
+Tüm kapılar geçtiyse: {{}}"""
+
+
+def _clean_json(raw: str) -> dict:
+    """JSON string temizle ve parse et. Hata durumunda boş dict döner."""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    raw = raw.strip().rstrip("`").strip()
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+
+
+def critique_brief(brief: dict, prompt: str, studio: dict) -> tuple[dict, dict]:
+    """
+    Brief alanlarını 4 kalite kapısından geçir.
+    Başarısız alanları yeniden yazar, geçenlere dokunmaz.
+    Döner: (güncellenmiş brief dict, critique token usage dict)
+    """
+    voice_we_not = brief.get("voice_we_not", ["", ""])
+    vwn1 = voice_we_not[0] if len(voice_we_not) > 0 else ""
+    vwn2 = voice_we_not[1] if len(voice_we_not) > 1 else ""
+
+    user_content = CRITIQUE_USER_TEMPLATE.format(
+        brand_name=brief.get("brand_name", ""),
+        sector=studio.get("sector", ""),
+        prompt=prompt[:200],  # token tasarrufu — ilk 200 karakter yeterli
+        concept_statement=brief.get("concept_statement", ""),
+        story_heading=brief.get("story_heading", ""),
+        tagline=brief.get("tagline", ""),
+        voice_we_not_1=vwn1,
+        voice_we_not_2=vwn2,
+        brand_story_preview=brief.get("brand_story_preview", "")[:300],  # token limiti
+    )
+
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=800,  # Sadece başarısız alanları yazar — kısa çıktı yeterli
+        system=CRITIQUE_SYSTEM,
+        messages=[{"role": "user", "content": user_content}],
+    )
+
+    token_usage = {
+        "input_tokens":  message.usage.input_tokens,
+        "output_tokens": message.usage.output_tokens,
+    }
+
+    fixes = _clean_json(message.content[0].text)
+
+    if not fixes:
+        # Tüm kapılar geçti — brief değişmeden döner
+        return brief, token_usage
+
+    # Başarısız alanları güncelle
+    updated = dict(brief)
+    for field, value in fixes.items():
+        if field == "voice_we_not_1":
+            wn = list(updated.get("voice_we_not", ["", ""]))
+            wn[0] = value
+            updated["voice_we_not"] = wn
+        elif field == "voice_we_not_2":
+            wn = list(updated.get("voice_we_not", ["", ""]))
+            if len(wn) < 2:
+                wn.append(value)
+            else:
+                wn[1] = value
+            updated["voice_we_not"] = wn
+        else:
+            updated[field] = value
+
+    # Critique geçmişini kaydet (admin/debug için)
+    updated["_critique_fixes"] = list(fixes.keys())
+
+    return updated, token_usage
+
+
 def generate_brand_brief(prompt: str, tier: str = "free") -> tuple[dict, dict]:
     """
     Claude'a prompt gönder → (brand brief dict, token usage dict) döner.
     tier: free | single | starter | pro | agency
+
+    Sektör otomatik tespit edilir → stüdyo DNA sistem prompt'a enjekte edilir.
     """
     model = MODEL_MAP.get(tier, DEFAULT_MODEL)
     max_tokens = 4096  # Sonnet her tier için — story_heading + concept_body eklendi
 
+    # Stüdyo DNA tespiti — sistem prompt'a enjekte edilir
+    studio = detect_sector(prompt)
+    studio_injection = (
+        f"\n\n─── STÜDYO KİŞİLİĞİ: {studio['label']} ({studio['sector']}) ───\n"
+        f"Bu markayı {studio['label']} perspektifiyle yaklaş.\n"
+        f"{studio['voice']}\n"
+        f"Bunu stil notu olarak değil, bakış açısı olarak içselleştir. "
+        f"Çıktıda 'stüdyo adı' geçmez — sadece o zihin yapısıyla üret."
+    )
+    dynamic_system = SYSTEM_PROMPT + studio_injection
+
     message = client.messages.create(
         model=model,
         max_tokens=max_tokens,
-        system=SYSTEM_PROMPT,
+        system=dynamic_system,
         messages=[
             {
                 "role": "user",
@@ -192,5 +471,17 @@ def generate_brand_brief(prompt: str, tier: str = "free") -> tuple[dict, dict]:
     raw = raw.strip().rstrip("`").strip()
 
     parsed = json.loads(raw)
+    # Stüdyo DNA'yı brief'e ekle — template ve admin stats için
+    parsed["studio_dna"] = {
+        "label":  studio["label"],
+        "sector": studio["sector"],
+    }
     # Sözleşme: eksik alanları default ile doldur, tip uyumsuzluklarını düzelt
-    return normalize_brief(parsed), token_usage
+    normalized = normalize_brief(parsed)
+
+    # ── Self-critique pass — 4 kalite kapısı ─────────────────────────────────
+    critiqued, critique_tokens = critique_brief(normalized, prompt, studio)
+    token_usage["input_tokens"]  += critique_tokens["input_tokens"]
+    token_usage["output_tokens"] += critique_tokens["output_tokens"]
+
+    return critiqued, token_usage

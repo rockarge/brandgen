@@ -66,6 +66,9 @@ DEFAULTS: dict[str, Any] = {
     "social_post_1_caption": "",
     "social_post_2_caption": "",
 
+    # Stüdyo DNA — detect_sector() tarafından eklenir
+    "studio_dna":           {},        # {"label": "Collins", "sector": "Tech/SaaS", ...}
+
     # Tier — pipeline tarafından eklenir
     "tier":                 "free",
 
