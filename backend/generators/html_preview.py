@@ -35,7 +35,7 @@ import anthropic
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
 from generators.logo_generator import select_logo_mono_png  # primary + icon artık Sonnet SVG
-from generators.image_generator import generate_app_image   # app1/app2 Pollinations.ai
+from generators.image_generator import generate_app_images   # app1/app2 Pollinations.ai (paralel)
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
 
@@ -592,9 +592,8 @@ def generate_html_preview(brief: dict) -> tuple:
     sonnet_svgs.pop("logo_mono", None)  # mono PIL'den geliyor, override etme
     svgs.update(sonnet_svgs)
 
-    # ── Uygulama görselleri: Pollinations.ai (ücretsiz, editorial fotoğraf kalitesi) ─
-    svgs["app1"] = generate_app_image(brief, slot="app1")
-    svgs["app2"] = generate_app_image(brief, slot="app2")
+    # ── Uygulama görselleri: Pollinations.ai — paralel istek (ikisi aynı anda) ────
+    svgs["app1"], svgs["app2"] = generate_app_images(brief)
 
     html_token_usage = {
         "input_tokens": svg_response.usage.input_tokens,
