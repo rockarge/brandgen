@@ -35,8 +35,8 @@ import anthropic
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
 from generators.logo_generator import (
-    select_logo_primary_svg, select_logo_mono_svg,
-    select_logo_icon_svg, _svg_data_uri,
+    select_logo_primary_png, select_logo_mono_png,
+    select_logo_icon_png,
 )
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
@@ -544,14 +544,10 @@ def generate_html_preview(brief: dict) -> tuple:
     _studio_match = re.search(r'STÜDYO:\s*([A-Za-zÇŞĞÜÖçşğüöı &]+?)(?:\s*[—–-]|\s*$)', creative_output, re.MULTILINE)
     _studio_label = _studio_match.group(1).strip() if _studio_match else brief.get("studio_dna", {}).get("label", "")
 
-    _primary_svg  = select_logo_primary_svg(brief, studio_label=_studio_label)
-    _mono_svg     = select_logo_mono_svg(brief)
-    _icon_svg     = select_logo_icon_svg(brief, studio_label=_studio_label)
-
     svgs = {
-        "logo_primary": _svg_data_uri(_primary_svg),
-        "logo_mono":    _svg_data_uri(_mono_svg),
-        "logo_icon":    _svg_data_uri(_icon_svg),
+        "logo_primary": select_logo_primary_png(brief, studio_label=_studio_label),
+        "logo_mono":    select_logo_mono_png(brief),
+        "logo_icon":    select_logo_icon_png(brief, studio_label=_studio_label),
     }
 
     # ── SVG Üretimi: Sonnet — sadece app1, app2 ───────────────────────────────

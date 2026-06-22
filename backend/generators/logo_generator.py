@@ -9,9 +9,12 @@ PIL fonksiyonlar: generate_logo_primary/icon/reversed/social_post() → PIL.Imag
 
 import base64
 import html as html_esc
-from PIL import Image, ImageDraw, ImageFont
+import io as _io
 import os
 import math
+import urllib.request as _urlreq
+from pathlib import Path as _Path
+from PIL import Image, ImageDraw, ImageFont
 
 FONTS_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "fonts")
 
@@ -892,3 +895,391 @@ def generate_card_front_svg(
   <rect x="1030" y="480" width="1" height="60" fill="{acc}" opacity="0.5"/>
 </svg>"""
     return _svg_data_uri(svg)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  PIL LOGO SİSTEMİ v2 — Gerçek font + geometrik marklar → PNG çıktı
+#  SVG browser rendering yok. Bebas Neue + Space Grotesk ile PIL çiziyor.
+#  Çıktı: data:image/png;base64,... (html_preview.py direkt kullanır)
+# ═════════════════════════════════════════════════════════════════════════════
+
+_PIL_FONTS_DIR = _Path(__file__).parent.parent / "assets" / "fonts"
+_PIL_FONT_CACHE: dict = {}
+
+_PIL_FONT_URLS = {
+    "display": "https://cdn.jsdelivr.net/gh/dharmatype/Bebas-Neue@master/Fonts/BN/BebasNeue-Regular.ttf",
+    "body":    "https://cdn.jsdelivr.net/gh/floriankarsten/space-grotesk@master/fonts/ttf/SpaceGrotesk-Bold.ttf",
+}
+
+
+def _pil_dl_fonts() -> None:
+    """Font dosyalarını bir kez indir, önbelleğe al."""
+    _PIL_FONTS_DIR.mkdir(parents=True, exist_ok=True)
+    for name, url in _PIL_FONT_URLS.items():
+        dest = _PIL_FONTS_DIR / f"{name}.ttf"
+        if dest.exists() and dest.stat().st_size > 8_000:
+            continue
+        try:
+            req = _urlreq.Request(url, headers={"User-Agent": "BrandGen/2.0"})
+            with _urlreq.urlopen(req, timeout=20) as r:
+                data = r.read()
+            if len(data) > 8_000:
+                dest.write_bytes(data)
+                print(f"[logo] Font indirildi: {name}")
+        except Exception as e:
+            print(f"[logo] Font indirilemedi ({name}): {e}")
+
+
+try:
+    _pil_dl_fonts()
+except Exception:
+    pass
+
+
+def _pil_font(name: str = "display", size: int = 80) -> ImageFont.FreeTypeFont:
+    key = (name, size)
+    if key in _PIL_FONT_CACHE:
+        return _PIL_FONT_CACHE[key]
+    path = _PIL_FONTS_DIR / f"{name}.ttf"
+    if path.exists():
+        try:
+            f = ImageFont.truetype(str(path), size)
+            _PIL_FONT_CACHE[key] = f
+            return f
+        except Exception:
+            pass
+    for p in SYSTEM_FONTS:
+        if os.path.exists(p):
+            try:
+                f = ImageFont.truetype(p, size)
+                _PIL_FONT_CACHE[key] = f
+                return f
+            except Exception:
+                continue
+    return ImageFont.load_default()
+
+
+def _png_uri(img: Image.Image) -> str:
+    """PIL Image → data:image/png;base64,... URI"""
+    buf = _io.BytesIO()
+    img.save(buf, "PNG", optimize=True)
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def _pil_rgb(h: str) -> tuple:
+    """#RRGGBB → (R, G, B)"""
+    try:
+        h2 = h.lstrip("#")
+        if len(h2) == 3:
+            h2 = h2[0]*2 + h2[1]*2 + h2[2]*2
+        return (int(h2[0:2], 16), int(h2[2:4], 16), int(h2[4:6], 16))
+    except Exception:
+        return (128, 128, 128)
+
+
+def _bebas_size(char_count: int, avail_w: int, max_s: int = 220, min_s: int = 28) -> int:
+    """
+    Bebas Neue için yaklaşık font boyutu.
+    Her karakter ≈ size × 0.50px genişlik (condensed font).
+    """
+    return max(min_s, min(max_s, int(avail_w / max(char_count, 1) / 0.50)))
+
+
+# ── GEOMETRIK MARKLAR — sıfır typography, salt form ─────────────────────────
+
+def _mark_slash(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
+    """
+    Mark A: Üç diyagonal şerit — hız / enerji / ivme.
+    Bureau Borsche / Collins / bold energy DNA.
+    """
+    img = Image.new("RGB", (S, S), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+    y0, y1 = int(S * 0.07), int(S * 0.93)
+    shift = int(S * 0.34)
+    strips = [
+        (int(S * 0.10), int(S * 0.10), ac),
+        (int(S * 0.26), int(S * 0.17), pc),
+        (int(S * 0.50), int(S * 0.13), pc),
+    ]
+    for bx, bw, col in strips:
+        d.polygon([
+            (bx,              y1),
+            (bx + bw,         y1),
+            (bx + bw + shift, y0),
+            (bx + shift,      y0),
+        ], fill=_pil_rgb(col))
+    return img
+
+
+def _mark_arc(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
+    """
+    Mark B: Hedef halkası + sağ üst accent dilimi.
+    Pentagram / Wolff Olins / premium DNA.
+    """
+    img = Image.new("RGB", (S, S), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+    cx = cy = S // 2
+    OR = int(S * 0.41)
+    IR = int(S * 0.25)
+    d.ellipse([cx - OR, cy - OR, cx + OR, cy + OR], fill=_pil_rgb(pc))
+    d.ellipse([cx - IR, cy - IR, cx + IR, cy + IR], fill=_pil_rgb(bg))
+    # Sağ üst çeyrek accent (PIL: 270°=üst, 360°=sağ, clockwise)
+    d.pieslice([cx - OR, cy - OR, cx + OR, cy + OR], start=270, end=360, fill=_pil_rgb(ac))
+    d.ellipse([cx - IR, cy - IR, cx + IR, cy + IR], fill=_pil_rgb(bg))
+    DR = int(S * 0.065)
+    d.ellipse([cx - DR, cy - DR, cx + DR, cy + DR], fill=_pil_rgb(ac))
+    return img
+
+
+def _mark_diamond(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
+    """
+    Mark C: Eşkenar dörtgen, dikey iki renkli bölünmüş.
+    Sagmeister & Walsh / dynamic DNA.
+    """
+    img = Image.new("RGB", (S, S), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+    m = int(S * 0.09)
+    cx = cy = S // 2
+    d.polygon([(cx, m), (S - m, cy), (cx, S - m), (m, cy)], fill=_pil_rgb(pc))
+    d.polygon([(cx, m), (S - m, cy), (cx, S - m)], fill=_pil_rgb(ac))
+    lw = max(3, S // 100)
+    d.line([(cx, m), (cx, S - m)], fill=_pil_rgb(bg), width=lw)
+    return img
+
+
+def _mark_bars(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
+    """
+    Mark D: Üç yatay bar, azalan genişlik.
+    Base Design / Pentagram / editorial DNA.
+    """
+    img = Image.new("RGB", (S, S), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+    x0 = int(S * 0.125)
+    bh = int(S * 0.135)
+    gap = int(S * 0.065)
+    total_h = 3 * bh + 2 * gap
+    y0 = (S - total_h) // 2
+    fw = S - 2 * x0
+    for i, (frac, col) in enumerate([(1.0, ac), (0.72, pc), (0.46, pc)]):
+        y = y0 + i * (bh + gap)
+        w = int(fw * frac)
+        d.rectangle([x0, y, x0 + w, y + bh], fill=_pil_rgb(col))
+    return img
+
+
+def _mark_plus(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
+    """
+    Mark E: Kalın artı — Landor / architectural / corporate DNA.
+    Yatay kol primary, dikey kol accent.
+    """
+    img = Image.new("RGB", (S, S), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+    m = int(S * 0.12)
+    arm = int(S * 0.22)
+    cx = cy = S // 2
+    d.rectangle([cx - arm // 2, m, cx + arm // 2, S - m], fill=_pil_rgb(ac))
+    d.rectangle([m, cy - arm // 2, S - m, cy + arm // 2], fill=_pil_rgb(pc))
+    return img
+
+
+_MARK_FNS = {
+    "A": _mark_slash,
+    "B": _mark_arc,
+    "C": _mark_diamond,
+    "D": _mark_bars,
+    "E": _mark_plus,
+}
+
+_STUDIO_MARK_MAP = {
+    "Collins":          "A",
+    "Bureau Borsche":   "A",
+    "Sagmeister&Walsh": "C",
+    "Pentagram":        "D",
+    "Landor":           "E",
+    "Wolff Olins":      "B",
+    "Base Design":      "D",
+}
+
+_ENERGY_MARK_MAP = {
+    "bold":      "A",
+    "urgent":    "A",
+    "energetic": "A",
+    "dynamic":   "C",
+    "playful":   "C",
+    "cinematic": "B",
+    "premium":   "B",
+    "luxury":    "B",
+    "editorial": "D",
+    "corporate": "D",
+    "minimal":   "E",
+}
+
+
+def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
+                   x: int, avail_w: int, area_top: int, area_h: int,
+                   color: str) -> None:
+    """
+    Bebas Neue ile brand adı + Space Grotesk ile tagline çizer.
+    area_top + area_h alanının içine dikey olarak ortalar.
+    """
+    fs = _bebas_size(len(name), avail_w)
+    f = _pil_font("display", fs)
+    bb = d.textbbox((0, 0), name, font=f)
+    nh = bb[3] - bb[1]
+    name_y = area_top + (area_h - nh) // 2 - int(area_h * 0.05)
+    d.text((x, name_y), name, font=f, fill=_pil_rgb(color))
+    if tag:
+        ts = max(22, fs // 5)
+        tf = _pil_font("body", ts)
+        d.text((x, name_y + nh + 18), tag.upper()[:42], font=tf, fill=_pil_rgb(color))
+
+
+# ── ANA LOGO ─────────────────────────────────────────────────────────────────
+
+def select_logo_primary_png(brief: dict, studio_label: str = "") -> str:
+    """
+    ANA logo: PIL composition + Bebas Neue.
+    Stüdyo DNA'sına göre 5 template'den biri seçilir.
+    PNG data URI döner (SVG yok, browser font yok).
+    """
+    name   = brief.get("brand_name", "BRAND").upper()
+    pc     = brief.get("primary_color", "#C9A25A")
+    sc     = brief.get("secondary_color", "#8B8B7A")
+    ac     = brief.get("accent_color") or sc
+    bg     = brief.get("bg_color", "#0F0D0C")
+    tag    = brief.get("tagline", "")
+    energy = str(brief.get("energy", "cinematic")).lower()
+
+    tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
+    if not tpl:
+        for kw, t in _ENERGY_TEMPLATE_MAP.items():
+            if kw in energy:
+                tpl = t
+                break
+    if not tpl:
+        tpl = "A"
+
+    W, H = 1600, 560
+    img = Image.new("RGB", (W, H), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+
+    if tpl == "A":
+        # Bold color block — Collins / Bureau Borsche
+        bw = int(W * 0.785)
+        aw = int(W * 0.055)
+        d.rectangle([0, 0, bw, H], fill=_pil_rgb(pc))
+        d.rectangle([bw, 0, bw + aw, H], fill=_pil_rgb(ac))
+        tc = "#FFFFFF" if _is_dark_hex(pc) else "#0D0D0D"
+        _draw_wordmark(d, name, tag, 88, bw - 100, 0, H, tc)
+
+    elif tpl == "B":
+        # Dark statement — Pentagram / Wolff Olins
+        tc = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+        _draw_wordmark(d, name, "", 88, W - 176, 0, H, pc)
+        fs = _bebas_size(len(name), W - 176)
+        f = _pil_font("display", fs)
+        bb = d.textbbox((0, 0), name, font=f)
+        nh = bb[3] - bb[1]
+        name_y = (H - nh) // 2 - int(H * 0.05)
+        bar_y = name_y + nh + 16
+        bar_w = min(bb[2] - bb[0] + 8, W - 200)
+        d.rectangle([88, bar_y, 88 + bar_w, bar_y + 10], fill=_pil_rgb(ac))
+        if tag:
+            tf = _pil_font("body", 28)
+            tw_bb = d.textbbox((0, 0), tag.upper()[:42], font=tf)
+            tw = tw_bb[2] - tw_bb[0]
+            d.text((W - 88 - tw, bar_y + 28), tag.upper()[:42], font=tf, fill=_pil_rgb(sc))
+
+    elif tpl == "C":
+        # Oversized initial — Sagmeister & Walsh
+        first = name[0] if name else "?"
+        rest = name[1:]
+        big_fs = min(490, H + 60)
+        bf = _pil_font("display", big_fs)
+        d.text((20, -int(H * 0.09)), first, font=bf, fill=_pil_rgb(pc))
+        if rest:
+            bb1 = d.textbbox((20, -int(H * 0.09)), first, font=bf)
+            rx = max(bb1[2] - 15, int(W * 0.30))
+            rest_fs = _bebas_size(len(rest), W - rx - 60)
+            rf = _pil_font("display", rest_fs)
+            rbb = d.textbbox((0, 0), rest, font=rf)
+            rh = rbb[3] - rbb[1]
+            ry = (H - rh) // 2 - int(H * 0.05)
+            d.text((rx, ry), rest, font=rf, fill=_pil_rgb(sc))
+
+    elif tpl == "D":
+        # Diagonal field — Bureau Borsche
+        px = int(W * 0.64)
+        d.polygon([(0, 0), (px, 0), (int(W * 0.46), H), (0, H)], fill=_pil_rgb(pc))
+        acc_pts = [(px, 0), (px + int(W * 0.05), 0),
+                   (int(W * 0.46) + int(W * 0.05), H), (int(W * 0.46), H)]
+        d.polygon(acc_pts, fill=_pil_rgb(ac))
+        tc = "#FFFFFF" if _is_dark_hex(pc) else "#0D0D0D"
+        _draw_wordmark(d, name, tag, 88, px - 100, 0, H, tc)
+
+    elif tpl == "E":
+        # Offset block — Base Design
+        bx, by = 64, int(H * 0.13)
+        bw2 = int(W * 0.82)
+        bh = int(H * 0.62)
+        d.rectangle([bx, by, bx + bw2, by + bh], fill=_pil_rgb(pc))
+        tc = "#FFFFFF" if _is_dark_hex(pc) else "#0D0D0D"
+        _draw_wordmark(d, name, tag, bx + 48, bw2 - 100, by, bh, tc)
+
+    return _png_uri(img)
+
+
+# ── MONO LOGO ─────────────────────────────────────────────────────────────────
+
+def select_logo_mono_png(brief: dict) -> str:
+    """
+    MONO logo: Bebas Neue wordmark, bg_color zemin, tagline altında.
+    PNG data URI döner.
+    """
+    name = brief.get("brand_name", "BRAND").upper()
+    bg   = brief.get("bg_color", "#0F0D0C")
+    tc   = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+    tag  = brief.get("tagline", "")
+
+    W, H = 1600, 420
+    img = Image.new("RGB", (W, H), _pil_rgb(bg))
+    d   = ImageDraw.Draw(img)
+
+    fs = _bebas_size(len(name), W - 100)
+    f  = _pil_font("display", fs)
+    bb = d.textbbox((0, 0), name, font=f)
+    nh = bb[3] - bb[1]
+    name_y = (H - nh) // 2 - 20
+    d.text((50, name_y), name, font=f, fill=_pil_rgb(tc))
+
+    if tag:
+        ts = max(24, fs // 5)
+        tf = _pil_font("body", ts)
+        d.text((50, name_y + nh + 18), tag.upper()[:42], font=tf, fill=_pil_rgb(tc))
+
+    return _png_uri(img)
+
+
+# ── İKON LOGO ─────────────────────────────────────────────────────────────────
+
+def select_logo_icon_png(brief: dict, studio_label: str = "") -> str:
+    """
+    İKON: Geometrik mark — sıfır typography, salt form.
+    Stüdyo veya energy'e göre 5 marktan biri seçilir.
+    PNG data URI döner.
+    """
+    pc = brief.get("primary_color", "#C9A25A")
+    ac = brief.get("accent_color") or brief.get("secondary_color", "#8B8B7A")
+    bg = brief.get("bg_color", "#0F0D0C")
+    en = str(brief.get("energy", "cinematic")).lower()
+
+    key = _STUDIO_MARK_MAP.get(studio_label, "")
+    if not key:
+        for kw, k in _ENERGY_MARK_MAP.items():
+            if kw in en:
+                key = k
+                break
+    if not key:
+        key = "A"
+
+    return _png_uri(_MARK_FNS[key](pc, ac, bg))
