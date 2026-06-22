@@ -141,7 +141,7 @@ STÜDYO DNA UYGULAMASI:
 - Landor → Güven veren form. Net hiyerarşi, temiz oran, kurumsal güç.
 - Wolff Olins → İsim sistem olur. Renk kimlik taşır, modüler yapı.
 
-Her element için sor: "Bu neden burada, ne anlatıyor?" — cevap yoksa sil.
+Her element için sor: "Bu neden burada, ne anlatıyor?" — cevap yoksa sil."""
 
 
 def _ascii_safe(name: str) -> str:
