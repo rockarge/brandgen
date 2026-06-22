@@ -34,7 +34,8 @@ import colorsys
 import anthropic
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
-from generators.logo_generator import select_logo_mono_png  # primary + icon artık Sonnet SVG
+from generators.logo_generator import select_logo_mono_png
+from generators.image_generator import generate_all_images  # fal.ai: logo + app görselleri
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
 
@@ -613,29 +614,19 @@ def generate_html_preview(brief: dict) -> tuple:
     if _studio_label:
         brief.setdefault("studio_dna", {})["label"] = _studio_label
 
-    # ── Python PIL: SADECE logo_mono (basit beyaz wordmark) ──────────────────
-    # logo_primary ve logo_icon artık Sonnet SVG üretiyor — PIL kaldırıldı
+    # ── Python PIL: logo_mono (beyaz wordmark) ───────────────────────────────
     svgs = {
         "logo_mono": select_logo_mono_png(brief),
     }
 
-    # ── SVG Üretimi: Sonnet — logo_primary, logo_icon ────────────────────────
-    svg_response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=10000,  # 4 SVG: logo_primary, logo_icon, app1, app2
-        system=_SVG_SYSTEM,
-        messages=[{"role": "user", "content": _build_svg_prompt(brief, design_output)}],
-    )
-    svg_raw = svg_response.content[0].text
-    # Sonnet çıktısından logo_primary, logo_icon al
-    sonnet_svgs = _extract_svgs(svg_raw, bg_color=brief["bg_color"])
-    sonnet_svgs.pop("logo_mono", None)  # mono PIL'den geliyor, override etme
-    svgs.update(sonnet_svgs)
-
+    # ── fal.ai: logo_primary, logo_icon, app1, app2 — paralel üretim ─────────
+    # design_output direktörlerin tasarım kararlarını içeriyor — prompt kalitesi için inject ediliyor
+    fal_images = generate_all_images(brief, design_brief=design_output)
+    svgs.update(fal_images)
 
     html_token_usage = {
-        "input_tokens": svg_response.usage.input_tokens,
-        "output_tokens": svg_response.usage.output_tokens,
+        "input_tokens": 0,
+        "output_tokens": 0,
     }
 
     # ── Aşama 1: Python ile window.BRAND doldur ────────────────────────────────
