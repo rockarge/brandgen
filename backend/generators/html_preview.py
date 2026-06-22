@@ -138,11 +138,71 @@ def _ascii_safe(name: str) -> str:
     return name.translate(tr_map)
 
 
+# ── Pre-call: İkon konsepti kilitleme ────────────────────────────────────────
+# SVG üretiminden ÖNCE çalışır — sadece ikon için ayrı bir Sonnet çağrısı.
+# Mevcut logo_icon_svg_brief'i alır, geometrik olarak kilitlemiş tek cümle döndürür.
+# Amaç: 20+ alan arasında boğulan brief yerine, ikon için tam odak.
+# Maliyet: ~$0.003–0.005/üretim ek (~%10–15 artış). Fallback: mevcut brief.
+
+_PRE_CALL_SYSTEM = """Sen marka kimlik direktörüsün. Görevin: tek bir ikon için geometrik olarak kilitlemiş SVG çizim talimatı üretmek.
+
+KURAL — anatomik dönüşüm (eklenti değil):
+• Apple modeli: Harfin BİR BÖLÜMÜNÜ KES → kesik boşluk anlam taşısın
+• FedEx modeli: İki harf ARASINDA zaten var olan negatif boşluktan form çıkar
+• Birleşim modeli: İki harfi BİRLEŞTİR → harflerin birleşiminden yeni form doğsun
+
+YASAK:
+✗ Harfin yanına / üstüne / etrafına şekil eklemek
+✗ Jenerik sektör sembolü (saat, ok, konum pimi, şimşek, daire/kare çerçeve)
+✗ "... ekle", "... yapıştır", "... koy" gibi eklenti ifadeleri
+
+SWAP TESTİ — zorunlu kontrol: Bu ikon başka bir kurye/hız/teslimat markasına koysan yine çalışır mı? → Evet ise baştan yaz.
+
+ÇIKTI: Sadece tek cümle talimat. Geometrik, koordinatlı, SVG'ye direkt çevrilebilir. Açıklama veya gerekçe yazma."""
+
+
+def _generate_locked_icon_concept(brief: dict, client) -> str:
+    """
+    Pre-call: İkon konseptini SVG üretiminden önce kilitle.
+    Hata durumunda mevcut brief'e fallback yapar — pipeline kırılmaz.
+    """
+    name = brief.get("brand_name", "")
+    first_letter = name[0] if name else ""
+    logo_concept = brief.get("logo_concept", "")
+    existing_brief = brief.get("logo_icon_svg_brief", "")
+    sector = brief.get("sector", "")
+
+    user_content = (
+        f"Marka: {name}\n"
+        f"Sektör: {sector}\n"
+        f"İlk (veya en güçlü) harf: {first_letter}\n"
+        f"Logo konsepti: {logo_concept[:300]}\n"
+        f"Mevcut talimat (geliştir veya tamamen yeniden yaz): {existing_brief[:300]}\n\n"
+        f"320×320 ikon için tek cümle SVG çizim talimatı üret. "
+        f"'{first_letter}' harfinin anatomisinden yola çık. "
+        f"Harfi KES, BİRLEŞTİR veya iç boşluğunu dönüştür — asla dışarıdan ekleme."
+    )
+
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=150,
+            system=_PRE_CALL_SYSTEM,
+            messages=[{"role": "user", "content": user_content}],
+        )
+        result = response.content[0].text.strip()
+        sentences = [s.strip() for s in result.replace("\n", " ").split(".") if s.strip()]
+        return (sentences[0] + ".") if sentences else result
+    except Exception:
+        return existing_brief  # fallback: mevcut brief
+
+
 def _build_svg_prompt(brief: dict) -> str:
     name = brief.get("brand_name", "BRAND")
     # SVG UTF-8'i destekler — orijinal Türkçe ismi kullan, dönüştürme
     # _ascii_safe sadece font-size hesabı için (karakter sayısı aynı)
     name_safe = name  # display için orijinal isim
+    first_letter = name[0] if name else "?"  # İkon için anatomi noktası
     primary = brief.get("primary_color", "#C9A25A")
     secondary = brief.get("secondary_color", "#8B8B7A")
     accent2 = brief.get("accent_color") or secondary
@@ -223,26 +283,31 @@ Wordmark: "metin + yatay çizgi" kombinasyonu YASAK. Konseptten türeyen form ş
 
 ===SVG:logo_icon===
 viewBox="0 0 320 320". Arka plan: {bg}. Ana renk: {primary}.
+MARKA ADI: "{name_safe}" — İLK HARF: "{first_letter}"
 
-DOĞRUDAN UYGULA — bu ikonun çizim talimatı:
+DOĞRUDAN UYGULA — bu ikonun kilitlemiş çizim talimatı (değiştirme, uygula):
 {logo_icon_brief}
 
-MUTLAK YASAKLAR (bunları yapan SVG'yi sil, yeniden çiz):
-✗ Harfin YANINA / ÜSTÜNE / ETRAFINA şekil eklemek — çizgi, ok, daire, nokta eklenti = yasak
+ADIM 1 — SEKTÖR KİMLİK TESTİ (çizmeden önce):
+Bu ikon tek başına, metin olmadan gösterilse: "Bu hangi sektör?" sorusuna cevap veriyor mu ama jenerik bir sembol mi? (saat, ok, konum pimi, şimşek, zarf = jenerik, yasak) → Jenerik ise "{first_letter}" harfinden türeyen anatomik forma dön.
+
+ADIM 2 — SWAP TESTİ (çizmeden önce):
+Bu ikon başka bir kurye / teslimat / hız markasına koysan çalışır mı? → Evet ise "{first_letter}" harfinin kendi geometrisine dön.
+
+ADIM 3 — ÇIZIM:
+YASAKLAR:
+✗ "{first_letter}" harfinin YANINA / ÜSTÜNE / ETRAFINA şekil eklemek — eklenti = yasak
 ✗ Harf + çerçeve (kare veya daire içinde harf)
-✗ Harfe diagonal çizgi yapıştırmak (diagonal/slash harfin parçası değilse yasak)
-✗ "E" veya "F" benzeri ASCII harfi + ek renk bloğu — FedEx taklidi değil özgün form isteniyor
+✗ Jenerik sembol: saat, ok, konum pimi, şimşek, daire içi harf
+✗ Harfe diagonal çizgi yapıştırmak (diagonal harfin parçası değilse yasak)
 
-DOĞRU YAKLAŞIMLAR (birini seç):
-✓ Harfin bir bölümünü KES → kesik boşluk anlam taşısın (Apple ısırığı modeli)
-✓ İki harfi BİRLEŞTİR → harflerin birleşiminden yeni form doğsun
-✓ Harfin iç boşluğunu (counter) şekle dönüştür
-✓ Harfin kendisini tanınmaz hale getirip başka bir nesneye çevir
+DOĞRU YOLLAR (birini seç):
+✓ "{first_letter}" harfinin bir kolunu veya bölümünü KES → kesik boşluk anlam taşısın (Apple ısırığı)
+✓ İki harfi BİRLEŞTİR → birleşim noktasından yeni form doğsun
+✓ Harfin iç counter/negative boşluğunu somut forma dönüştür (FedEx ok modeli)
+✓ Harfi tanınmaz hale getir ama hissettir
 
-FedEx neden çalışır: ok harflere EKLENMEDİ — E ve x arasındaki DOĞAL negatif boşluktan doğdu.
-Senin de eklemen değil, var olanı keşfetmen lazım.
-
-SWAP TESTİ (zorunlu, geçmeden bitirme): Bu ikon başka markaya yapıştırılabilir mi? → Evet ise sil, baştan yap.
+FedEx neden çalışır: ok E ve x arasına EKLENMEDİ — zaten orada olan boşluktu. Keşfet, ekleme.
 ===END===
 
 ===SVG:logo_mono===
@@ -338,6 +403,12 @@ def generate_html_preview(brief: dict) -> tuple:
 
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
         template = f.read()
+
+    # ── Pre-call: İkon konseptini kilitle ─────────────────────────────────────
+    # SVG'den önce ayrı bir Sonnet çağrısı — sadece ikon anatomisi için odaklanır.
+    # Sonuç brief["logo_icon_svg_brief"]'i override eder, SVG prompt bunu direkt kullanır.
+    locked_icon = _generate_locked_icon_concept(brief, client)
+    brief["logo_icon_svg_brief"] = locked_icon
 
     # ── Aşama 2: Sonnet'ten raw SVG al ────────────────────────────────────────
     svg_response = client.messages.create(
