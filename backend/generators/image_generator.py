@@ -58,29 +58,35 @@ def _logo_primary_prompt(brief: dict) -> str:
 
 
 def _logo_tipo_prompt(brief: dict) -> str:
-    """Tipo (tipografik wordmark) için Recraft prompt.
-    Amaç: marka adının kendisi logo — metin ağırlıklı, illüstrasyon yok."""
+    """Tipo (yaratıcı tipografik wordmark) için Recraft prompt.
+    Amaç: marka adı merkezde, yaratıcı harf tasarımı — sahneden bağımsız grafik wordmark."""
     name      = _ascii_safe(brief.get("brand_name", "BRAND"))
     primary   = brief.get("primary_color", "#333333")
     secondary = brief.get("secondary_color", "#888888")
     bg        = brief.get("bg_color", "#FFFFFF")
     energy    = brief.get("energy", "cinematic")
     font_display = brief.get("font_display", "")
-    mood      = ", ".join(brief.get("mood_words", [])[:2])
+    mood      = ", ".join(brief.get("mood_words", [])[:3])
+    concept   = brief.get("concept_statement", "")[:80]
 
-    style = "bold rounded playful geometric" if energy == "playful" else "elegant minimal sharp"
-    font_hint = f"Custom lettering inspired by {font_display} typeface. " if font_display else ""
+    if energy == "playful":
+        style_hint = "playful bold hand-lettered typography, bouncy rounded letterforms, fun graphic wordmark"
+        color_note = f"vibrant {primary} lettering on {bg}, {secondary} decorative accents on letters"
+    else:
+        style_hint = "elegant custom lettering, refined typographic wordmark, editorial brand typography"
+        color_note = f"{primary} letterforms on {bg} background, {secondary} as subtle accent"
+
+    font_hint = f"lettering style inspired by {font_display}. " if font_display else ""
 
     return (
-        f'Typographic wordmark logo for brand "{name}". '
-        f'The brand name "{name}" is the only visual element — pure lettering, no illustrations, '
-        f'no icons, no decorative objects, no characters. '
+        f'Creative typographic wordmark for brand "{name}". '
+        f'The word "{name}" rendered as custom lettering — {style_hint}. '
         f'{font_hint}'
-        f'{style} letterform design. '
+        f'{concept + ". " if concept else ""}'
         f'{mood + ". " if mood else ""}'
-        f'Color: {primary} letters on {bg} background, {secondary} for optional accent detail. '
-        f'Horizontal wordmark format. Clean vector. No gradients. No shadows. '
-        f'Vector illustration.'
+        f'{color_note}. '
+        f'Horizontal wordmark layout. Flat vector graphic. '
+        f'The brand name text is the dominant visual element.'
     ).strip()
 
 
@@ -189,7 +195,7 @@ async def _download_b64(url: str, mime: str) -> str:
 
 
 async def _recraft_logo(prompt: str) -> str:
-    """Recraft v3 ile logo görseli üret. Döner: data:image/png;base64,... veya ""."""
+    """Recraft v3 — vector_illustration stili. ANA logo ve İKON için (editorial illüstrasyon)."""
     try:
         result = await asyncio.to_thread(
             fal_client.run,
@@ -197,14 +203,35 @@ async def _recraft_logo(prompt: str) -> str:
             arguments={
                 "prompt": prompt,
                 "image_size": "square_hd",       # 1024×1024
-                "style": "vector_illustration",  # logo / vektör görünüm
+                "style": "vector_illustration",
                 "num_images": 1,
             },
         )
         url = result["images"][0]["url"]
         return await _download_b64(url, "image/png")
     except Exception as e:
-        print(f"[image_generator] Recraft hata: {e}")
+        print(f"[image_generator] Recraft hata (logo): {e}")
+        return ""
+
+
+async def _recraft_tipo(prompt: str) -> str:
+    """Recraft v3 — vector_illustration/flat_art stili. TİPO için (yaratıcı tipografik wordmark).
+    flat_art: grafik, geometrik, karakter sahnesine girme eğilimi daha düşük."""
+    try:
+        result = await asyncio.to_thread(
+            fal_client.run,
+            "fal-ai/recraft-v3",
+            arguments={
+                "prompt": prompt,
+                "image_size": "landscape_16_9",  # wordmark için yatay format
+                "style": "vector_illustration/flat_art",
+                "num_images": 1,
+            },
+        )
+        url = result["images"][0]["url"]
+        return await _download_b64(url, "image/png")
+    except Exception as e:
+        print(f"[image_generator] Recraft hata (tipo): {e}")
         return ""
 
 
@@ -250,7 +277,7 @@ def generate_all_images(brief: dict) -> dict:
     async def _run():
         return await asyncio.gather(
             _recraft_logo(_logo_primary_prompt(brief)),
-            _recraft_logo(_logo_tipo_prompt(brief)),
+            _recraft_tipo(_logo_tipo_prompt(brief)),   # flat_art stili — yaratıcı wordmark
             _recraft_logo(_logo_icon_prompt(brief)),
             _flux_app(_app1_prompt(brief)),
             _flux_app(_app2_prompt(brief)),
