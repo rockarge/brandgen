@@ -161,6 +161,7 @@ def _build_svg_prompt(brief: dict) -> str:
     tagline = brief.get("tagline", "")
     concept = brief.get("concept_statement", "")
     logo_concept = brief.get("logo_concept", "")
+    logo_icon_brief = brief.get("logo_icon_svg_brief", "")  # Direkt SVG çizim talimatı
     visual_language = brief.get("visual_language", "")
 
     # Font-size hesabı: viewBox genişliği / (karakter sayısı × 0.65) = max font-size
@@ -221,11 +222,27 @@ Wordmark: "metin + yatay çizgi" kombinasyonu YASAK. Konseptten türeyen form ş
 ===END===
 
 ===SVG:logo_icon===
-viewBox="0 0 320 320". "{name_safe[0]}" baş harfi başlangıç noktası — ama harf + kare/daire çerçeve KESİN YASAK.
-Harfin kendi geometrisinden veya marka konseptinden türeyen sembol.
-Arka plan: {bg}. {primary} ile form. Metin rengi {text}.
-Stüdyo: {studio_label} — o stüdyonun monogram anlayışını uygula.
-SWAP TESTİ: Bu ikon başka bir markada çalışır mı? → Çalışıyorsa sil, yeniden yap.
+viewBox="0 0 320 320". Arka plan: {bg}. Ana renk: {primary}.
+
+DOĞRUDAN UYGULA — bu ikonun çizim talimatı:
+{logo_icon_brief}
+
+MUTLAK YASAKLAR (bunları yapan SVG'yi sil, yeniden çiz):
+✗ Harfin YANINA / ÜSTÜNE / ETRAFINA şekil eklemek — çizgi, ok, daire, nokta eklenti = yasak
+✗ Harf + çerçeve (kare veya daire içinde harf)
+✗ Harfe diagonal çizgi yapıştırmak (diagonal/slash harfin parçası değilse yasak)
+✗ "E" veya "F" benzeri ASCII harfi + ek renk bloğu — FedEx taklidi değil özgün form isteniyor
+
+DOĞRU YAKLAŞIMLAR (birini seç):
+✓ Harfin bir bölümünü KES → kesik boşluk anlam taşısın (Apple ısırığı modeli)
+✓ İki harfi BİRLEŞTİR → harflerin birleşiminden yeni form doğsun
+✓ Harfin iç boşluğunu (counter) şekle dönüştür
+✓ Harfin kendisini tanınmaz hale getirip başka bir nesneye çevir
+
+FedEx neden çalışır: ok harflere EKLENMEDİ — E ve x arasındaki DOĞAL negatif boşluktan doğdu.
+Senin de eklemen değil, var olanı keşfetmen lazım.
+
+SWAP TESTİ (zorunlu, geçmeden bitirme): Bu ikon başka markaya yapıştırılabilir mi? → Evet ise sil, baştan yap.
 ===END===
 
 ===SVG:logo_mono===

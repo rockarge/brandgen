@@ -263,6 +263,7 @@ Bu markayı analiz et. Önce 4 katmanlı zihinsel süreçten geç (Situation →
   "font_body": "Okunabilir body font",
   "font_meta": "Meta/label font (DM Mono, JetBrains Mono, IBM Plex Mono gibi)",
   "logo_concept": "4 zorunlu element, her biri 1 cümle: (1) GÖRSEL METAFOR — marka özünü temsil eden beklenmedik ama doğru sembol (Apple elması gibi — hem bilgi hem yasak hem Newton, tek formda); (2) PRİMİTİF FORM — bu metaforu max 3 geometrik eleman ile nasıl ifade edersin, tek cümle; (3) NEGATİF ALAN — hangi boşluk/kesik anlam taşır (FedEx okunu veya Apple ısırığını rehber al — olmayan şey anlam verir); (4) SWAP ENGELI — sadece bu markaya ait, başka hiçbir markaya konamayacak özgün detay. YASAK: 'harf + şekil', 'monogram', 'sade ve modern' gibi jenerik cümleler.",
+  "logo_icon_svg_brief": "320x320 ikon için tek eylemli geometri talimatı — doğrudan SVG'ye çevrilebilir, geometrik ve somut: Örn: 'Ş harfinin üst yatayını 45° açıyla kes; kesik boşluk beyaz kalır, negatif ok okur.' VEYA 'F harfinin alt kolu yoktur; ortada gizli boşluk ok yönünü ima eder.' YASAK: 'modern', 'minimal', 'zarif harf', 'harf yanına şekil ekle' — bunlar talimat değil. Sadece 1 cümle: ne çizilecek ve nasıl.",
   "logo_versions": [
     {{"version": "primary", "description": "Yatay format açıklaması"}},
     {{"version": "icon", "description": "Monogram/ikon format"}},
