@@ -67,9 +67,10 @@ def _is_dark(hex_color: str) -> bool:
     luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return luminance < 0.5
 
-_SVG_SYSTEM = """Sen Bureau Borsche, Sagmeister & Walsh, Pentagram, Collins seviyesinde çalışan bir marka kimlik tasarımcısısın.
-Bu ajansların ortak özelliği: her logo bir KAVRAMDAN türer — şekil kütüphanesinden değil.
-Sana stüdyo DNA'sı, marka paleti, isim ve konsept verilecek. Tam olarak 5 SVG tasarımı üreteceksin.
+_SVG_SYSTEM = """Sen bir ajansın kıdemli uygulayıcı tasarımcısısın.
+Strateji direktörü, kreatif direktör ve tasarım direktörü üç ayrı aşamada karar verdi — bu kararlar sana "AJANS KARAR BRİEFİ" başlığıyla gelecek.
+Senin görevin: icat etmeden uygulamak. Brief'te yazılı her talimatı eksiksiz SVG'ye çevir. Kendi grafik kararın yok — direktörlerin kararı var.
+Tam olarak 5 SVG tasarımı üreteceksin.
 
 ÇIKTI FORMAT — her SVG için bu bloğu kullan:
 ===SVG:logo_primary===
@@ -89,10 +90,10 @@ SVG TEKNİK KURALLAR:
 - Türkçe karakter içeren kelimeleri ASLA letter-by-letter ayrı <text> elementine bölme
   YANLIŞ: <text>Ş</text><text>İ</text><text>P</text> → DOĞRU: <text>ŞİPŞAK</text> (tek element)
 
-KAVRAMSAL TASARIM SÜRECİ — her logo için bu sırayı izle:
-1. Bu markanın tek cümlelik özü nedir? (konseptten)
-2. Bu özü temsil eden GÖRSEL METAFOR nedir? (şekil değil, anlam)
-3. O metaforu forma çevir. Sadece sonra harf/isim ekle.
+UYGULAMA SIRASI — her logo için:
+1. "AJANS KARAR BRİEFİ" bölümündeki ilgili SVG talimatını oku
+2. O talimattaki koordinat, renk, form ve kompozisyon kararlarını direkt uygula
+3. Brief'te yazılmayan hiçbir şeyi ekleme — brief'te yazan her şeyi ekle
 
 SWAP TESTİ — geçmeden teslim etme:
 "Bu logoyu başka bir markaya koyabilir miyim?" → Eğer evet, tasarımı sil ve baştan başla.
@@ -136,6 +137,157 @@ def _ascii_safe(name: str) -> str:
     """
     tr_map = str.maketrans("İĞÜŞÖÇığüşöç", "IGUSSOigusso")
     return name.translate(tr_map)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AJANS PİPELİNE — 3 Rol + 1 İkon Pre-Call + 1 SVG Üretimi
+#
+# Call 1 — Strateji Direktörü  (~250 token): marka özü, boşluk, gerilim
+# Call 2 — Kreatif Direktör    (~400 token): stüdyo seçimi, 5 grafik karar
+# Call 3 — Tasarım Direktörü  (~900 token): her SVG için kesin teknik brief
+# Call 4 — İkon Kilitleme      (~150 token): anatomik ikon talimatı (mevcut)
+# Call 5 — Uygulayan Sonnet   (14000 token): direktörlerin brief'ini SVG'ye çevir
+#
+# Maliyet eki: ~$0.008–0.012 (toplam ~$0.07–0.09/üretim)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_STRATEGY_SYSTEM = """Sen bir marka strateji direktörüsün. Wolff Olins, Landor, Interbrand geçmişi.
+Brand brief'i okuyup 3 kesin çıktı üret — strateji kararı, tasarım değil.
+
+ÇIKTI FORMAT (sadece bu 3 satır, başka hiçbir şey yazma):
+ÖZSÖZ: <bu markanın tek cümlelik varoluş nedeni — şirket anlatımı değil, insan hayatındaki yeri>
+BOŞLUK: <kategorideki görsel/duygusal boşluk — rakipler ne yapıyor, bu marka nerede duracak>
+GERİLİM: <bu markanın içindeki yaratıcı gerilim — birlikte var olan iki karşıt değer>"""
+
+
+def _run_strategy_director(brief: dict, client) -> str:
+    """Call 1: Strateji direktörü — marka özü, boşluk, gerilim. ~250 token."""
+    name    = brief.get("brand_name", "")
+    sector  = brief.get("sector", "")
+    tagline = brief.get("tagline", "")
+    concept = brief.get("concept_statement", "")
+    story   = brief.get("brand_story", "")[:300]
+    voice   = brief.get("brand_voice", "")[:200]
+
+    try:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=250,
+            system=_STRATEGY_SYSTEM,
+            messages=[{"role": "user", "content": (
+                f"Marka: {name}\nSektör: {sector}\nTagline: {tagline}\n"
+                f"Konsept: {concept}\nHikaye: {story}\nSes/ton: {voice}\n\n"
+                f"Strateji analizini üret."
+            )}],
+        )
+        return resp.content[0].text.strip()
+    except Exception:
+        return f"ÖZSÖZ: {concept}\nBOŞLUK: Sektörde özgün görsel konum\nGERİLİM: Hız ve güven"
+
+
+_CREATIVE_DIR_SYSTEM = """Sen bir kreatif direktörüsün. Bureau Borsche, Collins, Sagmeister&Walsh seviyesinde iş çıkarmış birisin.
+Strateji analizini ve brand brief'i okudun. 5 grafik karar vereceksin.
+
+ÇIKTI FORMAT (sadece bu 5 satır — başka hiçbir şey):
+STÜDYO: <Collins/Bureau Borsche/Sagmeister&Walsh/Pentagram/Landor/Wolff Olins — tek cümle gerekçe>
+WORDMARK: <wordmark için TEK grafik karar — renk bloğu mu kesiyor, harf büyütülüyor mu, iki katmanlı mı, harfler birleşiyor mu?>
+İKON: <ikon için TEK anatomik karar — hangi harf, nasıl dönüştürülüyor, ne anlam taşıyor?>
+UYGULAMA1: <1080x1080 için vizyon — hangi kelime/kelimeler, nasıl dizilim, hangi grafik dil, renk dağılımı?>
+UYGULAMA2: <1080x1080 farklı dil — stroke-only wordmark + hangi pattern/grid + köşe aksanı nerede?>"""
+
+
+def _run_creative_director(brief: dict, strategy_output: str, client) -> str:
+    """Call 2: Kreatif direktör — stüdyo seçimi + 5 grafik karar. ~400 token."""
+    name     = brief.get("brand_name", "")
+    primary  = brief.get("primary_color", "#C9A25A")
+    secondary = brief.get("secondary_color", "#8B8B7A")
+    energy   = brief.get("energy", "cinematic")
+    logo_concept = brief.get("logo_concept", "")
+    visual_language = brief.get("visual_language", "")
+    tagline  = brief.get("tagline", "")
+
+    try:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=400,
+            system=_CREATIVE_DIR_SYSTEM,
+            messages=[{"role": "user", "content": (
+                f"=== STRATEJİ ANALİZİ ===\n{strategy_output}\n\n"
+                f"=== BRAND BRIEF ===\n"
+                f"Marka: {name}\nAna renk: {primary} | İkincil: {secondary}\n"
+                f"Enerji: {energy}\nLogo konsepti: {logo_concept}\n"
+                f"Görsel dil: {visual_language}\nTagline: {tagline}\n\n"
+                f"Grafik kararlarını ver."
+            )}],
+        )
+        return resp.content[0].text.strip()
+    except Exception:
+        return (
+            f"STÜDYO: Pentagram — sektöre uygun özgün form\n"
+            f"WORDMARK: Renk bloğu içinde cesur metin\n"
+            f"İKON: İlk harfin anatomisinden türeyen form\n"
+            f"UYGULAMA1: Tagline büyük, tek kelime her satırda\n"
+            f"UYGULAMA2: Stroke-only wordmark + geometrik grid"
+        )
+
+
+_DESIGN_DIR_SYSTEM = """Sen bir tasarım direktörüsün — ajansın son kalite kapısısın. Sana gelen her tasarım buradan geçmeden teslim edilmez.
+Strateji + kreatif kararları aldın. Her SVG için tasarımcıya direkt teslim edilecek teknik brief yaz.
+Tasarımcı bu brief'i okuyup yorumlamayacak — direkt uygulayacak.
+
+ÇIKTI FORMAT (5 bölüm başlığıyla — başka hiçbir şey yazma):
+
+LOGO_PRIMARY:
+[800x280 viewBox. Koordinat düzeyinde talimat: hangi element nerede, renk bloğu kaç px, metin hangi x/y'de, font-weight, üst üste binen elemanlar. Tamamlanmamış/renksiz alan YASAK.]
+
+LOGO_ICON:
+[320x320 viewBox. Harfin hangi kısmı nasıl kesiliyor, kesik boşluk hangi koordinatlarda, renk katmanları nasıl diziliyor. Koordinat düzeyinde.]
+
+LOGO_MONO:
+[800x280 viewBox. Logo primary'nin tek renk uyarlaması — şeffaf zemin, sadece metin rengi.]
+
+APP1:
+[1080x1080 viewBox. Tagline'dan hangi kelimeler, her kelimenin y koordinatı, font-size (~130-160px), arka planda hangi renk bloğu/diagonal şerit nerede, alt kısımda marka adı kaç px.]
+
+APP2:
+[1080x1080 viewBox. Stroke-only büyük wordmark — fill=none, stroke-width kaç, arka planda hangi pattern tipi, rengi, yoğunluğu, köşe renk aksanı nerede ve kaç px.]"""
+
+
+def _run_design_director(brief: dict, strategy_output: str, creative_output: str, client) -> str:
+    """Call 3: Tasarım direktörü — her SVG için koordinat düzeyinde teknik brief. ~900 token."""
+    name      = brief.get("brand_name", "BRAND")
+    name_len  = max(len(name), 1)
+    primary   = brief.get("primary_color", "#C9A25A")
+    secondary = brief.get("secondary_color", "#8B8B7A")
+    accent2   = brief.get("accent_color") or secondary
+    bg        = brief.get("bg_color", "#0F0D0C")
+    energy    = str(brief.get("energy", "cinematic")).lower()
+    text      = "#F2EDE4" if _is_dark(bg) else "#1A1A1A"
+    tagline   = brief.get("tagline", "")
+    first_letter = name[0] if name else "?"
+    max_font_logo = min(90, int(480 / (name_len * 0.65)))
+    max_font_app2 = min(200, int(860 / (name_len * 0.65)))
+
+    try:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=900,
+            system=_DESIGN_DIR_SYSTEM,
+            messages=[{"role": "user", "content": (
+                f"=== STRATEJİ ===\n{strategy_output}\n\n"
+                f"=== KRATİF KARARLAR ===\n{creative_output}\n\n"
+                f"=== TEKNİK PARAMETRELER ===\n"
+                f"Marka adı: {name} ({name_len} karakter) | İlk harf: {first_letter}\n"
+                f"Zemin: {bg} | Metin: {text} | Ana: {primary} | İkincil: {secondary} | Aksan: {accent2}\n"
+                f"Tagline: {tagline}\n"
+                f"Logo max font-size: {max_font_logo}px (800px genişlik, {name_len} karakter)\n"
+                f"App2 stroke wordmark max font-size: {max_font_app2}px\n\n"
+                f"Her SVG için kesin teknik talimat yaz. Tasarımcı direkt uygulayacak."
+            )}],
+        )
+        return resp.content[0].text.strip()
+    except Exception:
+        return ""  # Fallback: boş — SVG sistem prompt'u yine de çalışır
 
 
 # ── Pre-call: İkon konsepti kilitleme ────────────────────────────────────────
@@ -197,7 +349,7 @@ def _generate_locked_icon_concept(brief: dict, client) -> str:
         return existing_brief  # fallback: mevcut brief
 
 
-def _build_svg_prompt(brief: dict) -> str:
+def _build_svg_prompt(brief: dict, design_output: str = "") -> str:
     name = brief.get("brand_name", "BRAND")
     # SVG UTF-8'i destekler — orijinal Türkçe ismi kullan, dönüştürme
     # _ascii_safe sadece font-size hesabı için (karakter sayısı aynı)
@@ -251,7 +403,20 @@ def _build_svg_prompt(brief: dict) -> str:
         "Base Design":      "Minimal + yapısal kesinlik. Tipografi odaklı, fazlalık yok. İkon: negatif alan kullanan form.",
     }.get(studio_label, "Özgün ve marka DNA'sına sadık. Cüretkâr ama işlevsel.")
 
-    return f"""MARKA: {name_safe}
+    # Ajans brief'i inject — varsa en üste, tasarımcı önce bunu okur
+    agency_block = ""
+    if design_output:
+        sep = "=" * 62
+        agency_block = (
+            f"{sep}\n"
+            f"AJANS KARAR BRİEFİ\n"
+            f"Strateji + Kreatif + Tasarım Direktörü — Direkt Uygula\n"
+            f"{sep}\n"
+            f"{design_output}\n"
+            f"{sep}\n\n"
+        )
+
+    return f"""{agency_block}MARKA: {name_safe}
 STÜDYO DNA: {studio_label} ({studio_sector})
 STÜDYO STİLİ: {studio_style}
 LOGO YÖNERGESİ: {studio_logo_guide}
@@ -416,18 +581,24 @@ def generate_html_preview(brief: dict) -> tuple:
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
         template = f.read()
 
-    # ── Pre-call: İkon konseptini kilitle ─────────────────────────────────────
-    # SVG'den önce ayrı bir Sonnet çağrısı — sadece ikon anatomisi için odaklanır.
-    # Sonuç brief["logo_icon_svg_brief"]'i override eder, SVG prompt bunu direkt kullanır.
+    # ── Ajans Pipeline: 4 Pre-Call ────────────────────────────────────────────
+    # Call 1: Strateji direktörü — marka özü, boşluk, gerilim
+    strategy_output = _run_strategy_director(brief, client)
+    # Call 2: Kreatif direktör — stüdyo seçimi, 5 grafik karar
+    creative_output = _run_creative_director(brief, strategy_output, client)
+    # Call 3: Tasarım direktörü — her SVG için koordinat düzeyinde teknik brief
+    design_output = _run_design_director(brief, strategy_output, creative_output, client)
+    # Call 4: İkon konseptini kilitle (mevcut pre-call)
     locked_icon = _generate_locked_icon_concept(brief, client)
     brief["logo_icon_svg_brief"] = locked_icon
 
-    # ── Aşama 2: Sonnet'ten raw SVG al ────────────────────────────────────────
+    # ── SVG Üretimi: Uygulayan Sonnet ─────────────────────────────────────────
+    # max_tokens 8000 → 14000: direktör brief'leri + 5 SVG daha fazla alan ister
     svg_response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=8000,
+        max_tokens=14000,
         system=_SVG_SYSTEM,
-        messages=[{"role": "user", "content": _build_svg_prompt(brief)}],
+        messages=[{"role": "user", "content": _build_svg_prompt(brief, design_output)}],
     )
     svg_raw = svg_response.content[0].text
     svgs = _extract_svgs(svg_raw, bg_color=brief["bg_color"])
