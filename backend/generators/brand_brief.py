@@ -491,12 +491,24 @@ def generate_brand_brief(prompt: str, tier: str = "free") -> tuple[dict, dict]:
 
     raw = message.content[0].text.strip()
 
+    # DEBUG — her üretimde stop_reason ve ham yanıtın ilk 300 karakteri loglanır
+    print(f"[brief] stop_reason={message.stop_reason} output_tokens={message.usage.output_tokens}")
+    print(f"[brief] raw ilk 300: {raw[:300]!r}")
+
     # JSON temizle (bazen ```json ... ``` içinde gelebilir)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
     raw = raw.strip().rstrip("`").strip()
+
+    if not raw:
+        raise ValueError(
+            f"Anthropic boş yanıt döndürdü. "
+            f"stop_reason={message.stop_reason}, "
+            f"output_tokens={message.usage.output_tokens}, "
+            f"content_len={len(message.content)}"
+        )
 
     parsed = json.loads(raw)
     # Stüdyo DNA'yı brief'e ekle — template ve admin stats için
