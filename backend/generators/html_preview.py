@@ -16,11 +16,11 @@ Pipeline:
   1. brand_brief.py (Sonnet) → hikaye, konsept, ses/ton üretir (önceki aşamada oldu)
   2. select_logo_mono_png()  → PIL ile beyaz wordmark (logo_mono)
   3. generate_all_images()   → fal.ai paralel:
-       logo_primary + logo_icon → Recraft v3 (vector_illustration, SVG döner)
-       app1 + app2             → Flux Schnell (editorial fotoğraf, JPEG döner)
+       logo_primary + logo_tipo + logo_icon → Recraft v3 (vector_illustration)
+       app1 + app2                         → Flux Schnell (editorial fotoğraf, JPEG)
   4. window.BRAND JSON inject → brandkit-template.html
 
-Maliyet: ~$0.09/üretim (Recraft ×2 + Flux ×2)
+Maliyet: ~$0.13/üretim (Recraft ×3 + Flux ×2)
 """
 
 import os
@@ -83,9 +83,11 @@ def generate_html_preview(brief: dict) -> tuple:
         "logo_mono": select_logo_mono_png(brief),
     }
 
-    # fal.ai: logo_primary, logo_icon (Recraft v3 SVG), app1, app2 (Flux JPEG)
+    # fal.ai: logo_primary, logo_tipo, logo_icon (Recraft v3), app1, app2 (Flux JPEG)
     fal_images = generate_all_images(brief)
-    svgs.update(fal_images)
+    svgs["logo_tipo"] = fal_images.get("logo_tipo", "")
+    svgs["app1"] = fal_images.get("app1", "")
+    svgs["app2"] = fal_images.get("app2", "")
 
     html_token_usage = {
         "input_tokens": 0,
@@ -199,6 +201,7 @@ def generate_html_preview(brief: dict) -> tuple:
             },
             "logo": {
                 "primary":    svgs.get("logo_primary", ""),
+                "tipo":       svgs.get("logo_tipo", ""),
                 "icon":       svgs.get("logo_icon", ""),
                 "mono":       svgs.get("logo_mono", ""),
                 "inverse":    "",

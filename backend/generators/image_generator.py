@@ -1,16 +1,15 @@
 """
 image_generator.py — fal.ai Görsel Üretici
 
-Ne yapar    : fal.ai API ile 4 görsel üretir — paralel, hızlı.
-              logo_primary + logo_icon → Recraft v3 (logo/vektör odaklı, SVG döner)
-              app1 + app2             → Flux Schnell (editorial fotoğraf kalitesi, JPEG döner)
+Ne yapar    : fal.ai API ile 4 görseli paralel üretir.
+              logo_primary + logo_tipo + logo_icon → Recraft v3 (vector_illustration)
+              app1 + app2                          → Flux Schnell (editorial, JPEG)
+
 Kime bağlı  : html_preview.py → generate_all_images(brief) çağrısı
-Döner       : {"logo_primary": "data:image/...", "logo_icon": ..., "app1": ..., "app2": ...}
+Döner       : {"logo_primary": ..., "logo_tipo": ..., "logo_icon": ..., "app1": ..., "app2": ...}
 Bozulursa   : Hatalı slot "" döner — html_preview pipeline kırılmaz, o slot gizlenir.
-Maliyet     : Recraft ×2 (~$0.08) + Flux Schnell ×2 (~$0.006) = ~$0.09/üretim
+Maliyet     : Recraft ×3 (~$0.12) + Flux ×2 (~$0.006) = ~$0.13/üretim
 Türkçe      : Marka adı _ascii_safe() ile temizlenir — AI görsel promptunda Türkçe karakter gitMEZ.
-MIME notu   : fal.ai CDN, Recraft SVG çıktısını yanlışlıkla image/png header'ıyla servis eder.
-              _download_b64() magic byte sniffing ile gerçek türü tespit eder.
 """
 
 import os
@@ -55,6 +54,33 @@ def _logo_primary_prompt(brief: dict) -> str:
         f'{style} visual style. '
         f'Colors: {primary} dominant on {bg} background, {secondary} accent. '
         f'Horizontal format. No gradients. No shadows. Vector illustration.'
+    ).strip()
+
+
+def _logo_tipo_prompt(brief: dict) -> str:
+    """Tipo (tipografik wordmark) için Recraft prompt.
+    Amaç: marka adının kendisi logo — metin ağırlıklı, illüstrasyon yok."""
+    name      = _ascii_safe(brief.get("brand_name", "BRAND"))
+    primary   = brief.get("primary_color", "#333333")
+    secondary = brief.get("secondary_color", "#888888")
+    bg        = brief.get("bg_color", "#FFFFFF")
+    energy    = brief.get("energy", "cinematic")
+    font_display = brief.get("font_display", "")
+    mood      = ", ".join(brief.get("mood_words", [])[:2])
+
+    style = "bold rounded playful geometric" if energy == "playful" else "elegant minimal sharp"
+    font_hint = f"Custom lettering inspired by {font_display} typeface. " if font_display else ""
+
+    return (
+        f'Typographic wordmark logo for brand "{name}". '
+        f'The brand name "{name}" is the only visual element — pure lettering, no illustrations, '
+        f'no icons, no decorative objects, no characters. '
+        f'{font_hint}'
+        f'{style} letterform design. '
+        f'{mood + ". " if mood else ""}'
+        f'Color: {primary} letters on {bg} background, {secondary} for optional accent detail. '
+        f'Horizontal wordmark format. Clean vector. No gradients. No shadows. '
+        f'Vector illustration.'
     ).strip()
 
 
@@ -224,6 +250,7 @@ def generate_all_images(brief: dict) -> dict:
     async def _run():
         return await asyncio.gather(
             _recraft_logo(_logo_primary_prompt(brief)),
+            _recraft_logo(_logo_tipo_prompt(brief)),
             _recraft_logo(_logo_icon_prompt(brief)),
             _flux_app(_app1_prompt(brief)),
             _flux_app(_app2_prompt(brief)),
@@ -231,7 +258,7 @@ def generate_all_images(brief: dict) -> dict:
         )
 
     results = asyncio.run(_run())
-    keys = ["logo_primary", "logo_icon", "app1", "app2"]
+    keys = ["logo_primary", "logo_tipo", "logo_icon", "app1", "app2"]
     return {
         k: (r if isinstance(r, str) else "")
         for k, r in zip(keys, results)
