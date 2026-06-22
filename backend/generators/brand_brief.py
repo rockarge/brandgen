@@ -244,7 +244,7 @@ JSON formatında yanıt ver. Başka hiçbir şey yazma."""
 
 USER_TEMPLATE = """Kullanıcı isteği: {prompt}
 
-Bu markayı analiz et. Önce 4 katmanlı zihinsel süreçten geç (Situation → Pivot → Insight → Fikir), sonra JSON'ı doldur.
+Aşağıdaki JSON formatında yanıt ver. Sadece JSON döndür, başka hiçbir şey yazma.
 
 {{
   "brand_name": "İsim veya kısaltma",
@@ -495,12 +495,18 @@ def generate_brand_brief(prompt: str, tier: str = "free") -> tuple[dict, dict]:
     print(f"[brief] stop_reason={message.stop_reason} output_tokens={message.usage.output_tokens}")
     print(f"[brief] raw ilk 300: {raw[:300]!r}")
 
-    # JSON temizle (bazen ```json ... ``` içinde gelebilir)
+    # JSON temizle — backtick wrapper veya preamble metin varsa temizle
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
     raw = raw.strip().rstrip("`").strip()
+
+    # Model JSON öncesi metin yazdıysa (preamble), { başlayan noktayı bul
+    if raw and not raw.startswith("{"):
+        start = raw.find("{")
+        if start != -1:
+            raw = raw[start:]
 
     if not raw:
         raise ValueError(
