@@ -34,6 +34,7 @@ import colorsys
 import anthropic
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
+from generators.logo_generator import select_logo_primary_svg, select_logo_mono_svg, _svg_data_uri
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
 
@@ -73,13 +74,14 @@ Senin görevin: icat etmeden uygulamak. Brief'te yazılı her talimatı eksiksiz
 Tam olarak 5 SVG tasarımı üreteceksin.
 
 ÇIKTI FORMAT — her SVG için bu bloğu kullan:
-===SVG:logo_primary===
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280">
+===SVG:logo_icon===
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
   ... tasarım ...
 </svg>
 ===END===
 
-5 blok: logo_primary, logo_icon, logo_mono, app1, app2
+3 blok üreteceksin: logo_icon, app1, app2
+logo_primary ve logo_mono sistem tarafından ayrıca üretiliyor — sen bunları ÜRETME.
 Bloklar arasında başka HİÇBİR ŞEY yazma.
 
 SVG TEKNİK KURALLAR:
@@ -418,8 +420,6 @@ def _build_svg_prompt(brief: dict, design_output: str = "") -> str:
 
     return f"""{agency_block}MARKA: {name_safe}
 STÜDYO DNA: {studio_label} ({studio_sector})
-STÜDYO STİLİ: {studio_style}
-LOGO YÖNERGESİ: {studio_logo_guide}
 ENERJİ: {energy}
 TAGLINE: {tagline}
 KONSEPT: {concept}
@@ -433,30 +433,7 @@ RENKLER:
   İkincil: {secondary}
   Vurgu 2: {accent2}
 
-5 SVG tasarla — stüdyo DNA'sını her tasarımda hissettir:
-
-===SVG:logo_primary===
-viewBox="0 0 800 280". Arka plan: {bg} (ZORUNLU — değiştirme).
-Marka adı: "{name_safe}" — Türkçe karakterleri OLDUĞU GİBİ yaz (İ, Ş, Ğ, Ü, Ö, Ç desteklenir).
-Tüm ismi TEK <text> elementinde yaz. ASLA harf-harf bölme.
-FONT-SIZE SINIRI: {name_len} karakter → maksimum {max_font_logo}px. Bunu AŞMA.
-KAVRAMSAL ANCHOR: Logo konseptini ({logo_concept}) görsel forma çevir — şekil değil anlam.
-{studio_logo_guide}
-
-TİPOGRAFİ ZORUNLULUĞU — bunu yapmazsan logo geçersizdir:
-Marka adı DÜZ METİN olarak yazılamaz. Şunlardan EN AZ BİRİNİ uygula:
-  • Bazı harfleri {primary} veya {secondary} rengiyle boyama (kalan harfler {text} rengi)
-  • Marka adının ARKASINA büyük renk bloğu, geometric şekil veya diagonal şerit (konseptten türeyen)
-  • Harfler arası veya harf içi negatif boşluktan form çıkarma
-  • Büyük/küçük harf veya ağırlık kombinasyonu (bazı harfler bold, bazıları light)
-  • Marka adının bir harfini ikonla (logo_icon) yer değiştirme — SVG <image> veya inline path kullan
-
-YASAK:
-✗ Sadece düz tek renkli metin + altına/üstüne yatay çizgi
-✗ "metin + sağında küçük sembol" kombinasyonu
-✗ Boş zemin üzerinde sadece metin
-Wordmark her zaman GRAFIK bir obje gibi davransın. Renk, form, kompozisyon — hepsi markaya özgü.
-===END===
+NOT: logo_primary ve logo_mono sistem tarafından üretildi — sen SADECE 3 SVG üreteceksin:
 
 ===SVG:logo_icon===
 viewBox="0 0 320 320". Arka plan: {bg}. Ana renk: {primary}.
@@ -465,48 +442,37 @@ MARKA ADI: "{name_safe}" — İLK HARF: "{first_letter}"
 DOĞRUDAN UYGULA — bu ikonun kilitlemiş çizim talimatı (değiştirme, uygula):
 {logo_icon_brief}
 
-ADIM 1 — SEKTÖR KİMLİK TESTİ (çizmeden önce):
-Bu ikon tek başına, metin olmadan gösterilse: "Bu hangi sektör?" sorusuna cevap veriyor mu ama jenerik bir sembol mi? (saat, ok, konum pimi, şimşek, zarf = jenerik, yasak) → Jenerik ise "{first_letter}" harfinden türeyen anatomik forma dön.
-
-ADIM 2 — SWAP TESTİ (çizmeden önce):
-Bu ikon başka bir kurye / teslimat / hız markasına koysan çalışır mı? → Evet ise "{first_letter}" harfinin kendi geometrisine dön.
-
-ADIM 3 — ÇIZIM:
-YASAKLAR:
-✗ "{first_letter}" harfinin YANINA / ÜSTÜNE / ETRAFINA şekil eklemek — eklenti = yasak
-✗ Harf + çerçeve (kare veya daire içinde harf)
-✗ Jenerik sembol: saat, ok, konum pimi, şimşek, daire içi harf
-✗ Harfe diagonal çizgi yapıştırmak (diagonal harfin parçası değilse yasak)
+YASAKLAR — bunlardan biri varsa tasarım geçersizdir:
+✗ "{first_letter}" harfinin YANINA / ÜSTÜNE / ETRAFINA şekil EKLEMEK
+✗ Harf + kare/daire/dörtgen çerçeve
+✗ Jenerik sembol: saat, ok, konum pimi, şimşek, zarf, uçak
+✗ Boş zemin üzerinde sadece düz harf
 
 DOĞRU YOLLAR (birini seç):
-✓ "{first_letter}" harfinin bir kolunu veya bölümünü KES → kesik boşluk anlam taşısın (Apple ısırığı)
+✓ "{first_letter}" harfinin bir kolunu/bölümünü KES → boşluk anlam taşısın
 ✓ İki harfi BİRLEŞTİR → birleşim noktasından yeni form doğsun
-✓ Harfin iç counter/negative boşluğunu somut forma dönüştür (FedEx ok modeli)
-✓ Harfi tanınmaz hale getir ama hissettir
+✓ Harfin iç counter/negatif boşluğunu somut forma dönüştür (FedEx ok = e ile x arasındaki boşluktu)
+✓ Harfi bold geometrik forma indir, tek kompozisyonel element olsun
 
-FedEx neden çalışır: ok E ve x arasına EKLENMEDİ — zaten orada olan boşluktu. Keşfet, ekleme.
-===END===
-
-===SVG:logo_mono===
-viewBox="0 0 800 280". logo_primary tek renkli versiyon.
-SADECE {text} rengi. Zemin şeffaf (background rect YOK).
+SWAP TESTİ: Bu ikon başka bir markaya koysan yine çalışır mı? → Evet ise "{first_letter}" harfinin kendi geometrisine dön.
 ===END===
 
 ===SVG:app1===
 viewBox="0 0 1080 1080". Zemin {bg}.
 Tagline'dan 2-3 kelime BÜYÜK, her kelime ayrı <text> satırında: "{tagline[:35]}"
 FONT-SIZE SINIRI: En uzun kelime {max_tagline_word_len} karakter → maksimum {max_font_app1}px. Bunu AŞMA.
-font-weight="900", {text} rengi. Her kelime için y değerini kademeli artır (250, 250+font-size, ...).
+font-weight="900", {text} rengi. Her kelime için y değerini kademeli artır (300, 300+font-size, ...).
 Alt kısımda "{name_safe}" {primary} rengiyle, daha küçük (font-size 60-80).
 Güçlü renk bloğu veya diagonal şerit — {primary} veya {secondary} kullan.
+Sol üst veya sağ alt köşeye küçük geometrik aksan.
 ===END===
 
 ===SVG:app2===
 viewBox="0 0 1080 1080". app1'den tamamen farklı kompozisyon.
 "{name_safe}" büyük stroke-only (fill="none", stroke="{primary}", stroke-width="10", font-size {max_font_app2}px MAX).
 FONT-SIZE SINIRI: "{name_safe}" = {name_len} karakter → maksimum {max_font_app2}px. Bunu AŞMA.
-Arka planda tekrarlayan geometrik grid veya pattern. Renk aksan bloğu.
-Alt veya üst köşede konsept: "{concept[:50]}"
+Arka planda tekrarlayan geometrik grid veya pattern ({secondary} rengi, çok düşük opacity ~0.08).
+Renk aksan bloğu (sağ alt veya sol üst köşe, {primary}).
 ===END==="""
 
 
@@ -592,16 +558,30 @@ def generate_html_preview(brief: dict) -> tuple:
     locked_icon = _generate_locked_icon_concept(brief, client)
     brief["logo_icon_svg_brief"] = locked_icon
 
-    # ── SVG Üretimi: Uygulayan Sonnet ─────────────────────────────────────────
-    # max_tokens 8000 → 14000: direktör brief'leri + 5 SVG daha fazla alan ister
+    # ── Python SVG: logo_primary + logo_mono — AI yok, Python template ────────
+    # Stüdyo kararını creative_output'tan parse et
+    _studio_match = re.search(r'STÜDYO:\s*([A-Za-zÇŞĞÜÖçşğüöı &]+?)(?:\s*[—–-]|\s*$)', creative_output, re.MULTILINE)
+    _studio_label = _studio_match.group(1).strip() if _studio_match else brief.get("studio_dna", {}).get("label", "")
+
+    _primary_svg  = select_logo_primary_svg(brief, studio_label=_studio_label)
+    _mono_svg     = select_logo_mono_svg(brief)
+
+    svgs = {
+        "logo_primary": _svg_data_uri(_primary_svg),
+        "logo_mono":    _svg_data_uri(_mono_svg),
+    }
+
+    # ── SVG Üretimi: Sonnet — sadece logo_icon, app1, app2 ────────────────────
     svg_response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=14000,
+        max_tokens=9000,
         system=_SVG_SYSTEM,
         messages=[{"role": "user", "content": _build_svg_prompt(brief, design_output)}],
     )
     svg_raw = svg_response.content[0].text
-    svgs = _extract_svgs(svg_raw, bg_color=brief["bg_color"])
+    # Sonnet çıktısını merge et (logo_icon, app1, app2)
+    sonnet_svgs = _extract_svgs(svg_raw, bg_color=brief["bg_color"])
+    svgs.update(sonnet_svgs)
 
     html_token_usage = {
         "input_tokens": svg_response.usage.input_tokens,
