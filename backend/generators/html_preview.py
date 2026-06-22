@@ -34,7 +34,10 @@ import colorsys
 import anthropic
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
-from generators.logo_generator import select_logo_primary_svg, select_logo_mono_svg, _svg_data_uri
+from generators.logo_generator import (
+    select_logo_primary_svg, select_logo_mono_svg,
+    select_logo_icon_svg, _svg_data_uri,
+)
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
 
@@ -80,8 +83,8 @@ Tam olarak 5 SVG tasarımı üreteceksin.
 </svg>
 ===END===
 
-3 blok üreteceksin: logo_icon, app1, app2
-logo_primary ve logo_mono sistem tarafından ayrıca üretiliyor — sen bunları ÜRETME.
+2 blok üreteceksin: app1, app2
+logo_primary, logo_mono ve logo_icon sistem tarafından Python ile üretiliyor — sen bunları ÜRETME.
 Bloklar arasında başka HİÇBİR ŞEY yazma.
 
 SVG TEKNİK KURALLAR:
@@ -433,29 +436,7 @@ RENKLER:
   İkincil: {secondary}
   Vurgu 2: {accent2}
 
-NOT: logo_primary ve logo_mono sistem tarafından üretildi — sen SADECE 3 SVG üreteceksin:
-
-===SVG:logo_icon===
-viewBox="0 0 320 320". Arka plan: {bg}. Ana renk: {primary}.
-MARKA ADI: "{name_safe}" — İLK HARF: "{first_letter}"
-
-DOĞRUDAN UYGULA — bu ikonun kilitlemiş çizim talimatı (değiştirme, uygula):
-{logo_icon_brief}
-
-YASAKLAR — bunlardan biri varsa tasarım geçersizdir:
-✗ "{first_letter}" harfinin YANINA / ÜSTÜNE / ETRAFINA şekil EKLEMEK
-✗ Harf + kare/daire/dörtgen çerçeve
-✗ Jenerik sembol: saat, ok, konum pimi, şimşek, zarf, uçak
-✗ Boş zemin üzerinde sadece düz harf
-
-DOĞRU YOLLAR (birini seç):
-✓ "{first_letter}" harfinin bir kolunu/bölümünü KES → boşluk anlam taşısın
-✓ İki harfi BİRLEŞTİR → birleşim noktasından yeni form doğsun
-✓ Harfin iç counter/negatif boşluğunu somut forma dönüştür (FedEx ok = e ile x arasındaki boşluktu)
-✓ Harfi bold geometrik forma indir, tek kompozisyonel element olsun
-
-SWAP TESTİ: Bu ikon başka bir markaya koysan yine çalışır mı? → Evet ise "{first_letter}" harfinin kendi geometrisine dön.
-===END===
+NOT: logo_primary, logo_mono ve logo_icon sistem tarafından üretildi — sen SADECE 2 SVG üreteceksin:
 
 ===SVG:app1===
 viewBox="0 0 1080 1080". Zemin {bg}.
@@ -565,22 +546,27 @@ def generate_html_preview(brief: dict) -> tuple:
 
     _primary_svg  = select_logo_primary_svg(brief, studio_label=_studio_label)
     _mono_svg     = select_logo_mono_svg(brief)
+    _icon_svg     = select_logo_icon_svg(brief, studio_label=_studio_label)
 
     svgs = {
         "logo_primary": _svg_data_uri(_primary_svg),
         "logo_mono":    _svg_data_uri(_mono_svg),
+        "logo_icon":    _svg_data_uri(_icon_svg),
     }
 
-    # ── SVG Üretimi: Sonnet — sadece logo_icon, app1, app2 ────────────────────
+    # ── SVG Üretimi: Sonnet — sadece app1, app2 ───────────────────────────────
     svg_response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=9000,
+        max_tokens=7000,
         system=_SVG_SYSTEM,
         messages=[{"role": "user", "content": _build_svg_prompt(brief, design_output)}],
     )
     svg_raw = svg_response.content[0].text
-    # Sonnet çıktısını merge et (logo_icon, app1, app2)
+    # Sonnet çıktısını merge et — sadece app1, app2 alınır (logo'lar Python'dan)
     sonnet_svgs = _extract_svgs(svg_raw, bg_color=brief["bg_color"])
+    sonnet_svgs.pop("logo_primary", None)
+    sonnet_svgs.pop("logo_mono", None)
+    sonnet_svgs.pop("logo_icon", None)
     svgs.update(sonnet_svgs)
 
     html_token_usage = {

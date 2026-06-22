@@ -644,6 +644,135 @@ def select_logo_mono_svg(brief: dict) -> str:
     return _tpl_mono_wordmark(name, text, tagline, name_len)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  İKON TEMPLATE SİSTEMİ — Python-rendered, Sonnet yok
+#
+#  I-A: NEGATIVE BLOCK  — Harf, primary blok üzerinden bg rengiyle oyulmuş
+#  I-B: DIAGONAL CUT    — Harf üzerinden diagonal şerit kesip geçiyor (hız/enerji)
+#  I-C: SPLIT COLOR     — Harf dikey ikiye bölünmüş, iki farklı renk
+#  I-D: BOLD FRAME      — Harf bold primary, üst/alt accent şerit (sistematik)
+#
+#  Seçim: stüdyo kararına göre dispatch. Fallback: energy bazlı.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _icon_negative_block(first, primary, bg, accent):
+    """I-A: Primary color bloğun içine harf bg rengiyle oyulmuş. Collins / Landor."""
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">'
+        f'<rect width="320" height="320" fill="{bg}"/>'
+        f'<rect x="20" y="20" width="280" height="280" fill="{primary}"/>'
+        f'<text x="160" y="248" text-anchor="middle" '
+        f'font-family="\'Arial Black\',\'Helvetica Neue\',Impact,sans-serif" '
+        f'font-weight="900" font-size="260" fill="{bg}">{_e(first)}</text>'
+        f'<rect x="20" y="272" width="90" height="9" fill="{accent}"/>'
+        f'</svg>'
+    )
+
+
+def _icon_diagonal_cut(first, primary, bg, accent):
+    """I-B: Harf üzerinden diagonal şerit — hız, keskinlik. Bureau Borsche / bold energy."""
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">'
+        f'<rect width="320" height="320" fill="{bg}"/>'
+        f'<text x="160" y="252" text-anchor="middle" '
+        f'font-family="\'Arial Black\',\'Helvetica Neue\',Impact,sans-serif" '
+        f'font-weight="900" font-size="268" fill="{primary}">{_e(first)}</text>'
+        f'<polygon points="0,96 320,28 320,68 0,136" fill="{bg}"/>'
+        f'<rect x="0" y="96" width="320" height="5" fill="{accent}"/>'
+        f'</svg>'
+    )
+
+
+def _icon_split_color(first, primary, accent, bg):
+    """I-C: Harf dikey ikiye bölünmüş, iki renk. Sagmeister & Walsh / playful."""
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">'
+        f'<defs>'
+        f'<clipPath id="icp-l"><rect x="0" y="0" width="160" height="320"/></clipPath>'
+        f'<clipPath id="icp-r"><rect x="160" y="0" width="160" height="320"/></clipPath>'
+        f'</defs>'
+        f'<rect width="320" height="320" fill="{bg}"/>'
+        f'<text clip-path="url(#icp-l)" x="160" y="252" text-anchor="middle" '
+        f'font-family="\'Arial Black\',\'Helvetica Neue\',Impact,sans-serif" '
+        f'font-weight="900" font-size="268" fill="{primary}">{_e(first)}</text>'
+        f'<text clip-path="url(#icp-r)" x="160" y="252" text-anchor="middle" '
+        f'font-family="\'Arial Black\',\'Helvetica Neue\',Impact,sans-serif" '
+        f'font-weight="900" font-size="268" fill="{accent}">{_e(first)}</text>'
+        f'<rect x="158" y="0" width="4" height="320" fill="{bg}"/>'
+        f'</svg>'
+    )
+
+
+def _icon_bold_frame(first, primary, bg, accent):
+    """I-D: Harf primary renk, üst/alt accent şerit. Pentagram / Wolff Olins."""
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">'
+        f'<rect width="320" height="320" fill="{bg}"/>'
+        f'<text x="160" y="252" text-anchor="middle" '
+        f'font-family="\'Arial Black\',\'Helvetica Neue\',Impact,sans-serif" '
+        f'font-weight="900" font-size="268" fill="{primary}">{_e(first)}</text>'
+        f'<rect x="0" y="0" width="320" height="10" fill="{accent}"/>'
+        f'<rect x="0" y="310" width="320" height="10" fill="{accent}"/>'
+        f'</svg>'
+    )
+
+
+_STUDIO_ICON_MAP = {
+    "Collins":          "A",   # negative block
+    "Bureau Borsche":   "B",   # diagonal cut
+    "Sagmeister&Walsh": "C",   # split color
+    "Pentagram":        "D",   # bold frame
+    "Landor":           "A",   # negative block
+    "Wolff Olins":      "D",   # bold frame
+    "Base Design":      "A",   # negative block
+}
+
+_ENERGY_ICON_MAP = {
+    "bold":      "B",
+    "urgent":    "B",
+    "energetic": "B",
+    "dynamic":   "C",
+    "playful":   "C",
+    "cinematic": "A",
+    "premium":   "A",
+    "luxury":    "A",
+}
+
+
+def select_logo_icon_svg(brief: dict, studio_label: str = "") -> str:
+    """
+    İkon SVG: Python template, Sonnet yok.
+    Harfin kendi formu üzerinde çalışır — dışarıdan ekleme yok.
+    """
+    name     = brief.get("brand_name", "BRAND")
+    first    = name[0] if name else "?"
+    primary  = brief.get("primary_color", "#C9A25A")
+    secondary= brief.get("secondary_color", "#8B8B7A")
+    accent   = brief.get("accent_color") or secondary
+    bg       = brief.get("bg_color", "#0F0D0C")
+    energy   = str(brief.get("energy", "cinematic")).lower()
+
+    tpl = _STUDIO_ICON_MAP.get(studio_label, "")
+    if not tpl:
+        for kw, t in _ENERGY_ICON_MAP.items():
+            if kw in energy:
+                tpl = t
+                break
+    if not tpl:
+        tpl = "A"
+
+    if tpl == "A":
+        return _icon_negative_block(first, primary, bg, accent)
+    elif tpl == "B":
+        return _icon_diagonal_cut(first, primary, bg, accent)
+    elif tpl == "C":
+        return _icon_split_color(first, primary, accent, bg)
+    elif tpl == "D":
+        return _icon_bold_frame(first, primary, bg, accent)
+    else:
+        return _icon_negative_block(first, primary, bg, accent)
+
+
 def generate_social_post_svg(
     brand_name: str,
     caption: str,
