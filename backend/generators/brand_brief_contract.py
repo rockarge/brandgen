@@ -72,6 +72,9 @@ DEFAULTS: dict[str, Any] = {
     # Tier — pipeline tarafından eklenir
     "tier":                 "free",
 
+    # energy_tier — normalize_brief() tarafından hesaplanır (5-tier: cinematic/bold/luxury/playful/minimal)
+    "energy_tier":          "cinematic",
+
     # Pipeline tarafından eklenen görsel base64'ler (opsiyonel)
     # html_preview.py bu alanları window.BRAND'e taşır
     "_card_front_b64":      "",   # PIL kartvizit ön — solo+
@@ -111,9 +114,24 @@ def normalize_brief(raw: dict) -> dict:
     if not result.get("accent_color"):
         result["accent_color"] = result["secondary_color"]
 
-    # energy normalization
-    energy = str(result.get("energy", "cinematic")).lower()
-    result["energy"] = "playful" if "playful" in energy else "cinematic"
+    # energy normalization — 2-tier (mevcut kod uyumu için korunur)
+    energy_raw = str(result.get("energy", "cinematic")).lower()
+    result["energy"] = "playful" if "playful" in energy_raw else "cinematic"
+
+    # energy_tier — 5-tier (logo template dispatch + ikon seçim için)
+    _ENERGY_TIER_MAP = {
+        "cinematic": ["cinematic", "editorial", "sophisticated", "mysterious", "dark", "noir"],
+        "bold":      ["bold", "energetic", "dynamic", "urgent", "intense", "strong", "powerful", "vivid"],
+        "luxury":    ["luxury", "exclusive", "refined", "elegant", "premium", "opulent", "prestige"],
+        "playful":   ["playful", "fun", "vibrant", "youthful", "friendly", "bright", "colorful", "lively"],
+        "minimal":   ["minimal", "clean", "pure", "restrained", "simple", "quiet", "calm", "zen"],
+    }
+    detected_tier = "cinematic"  # default
+    for tier, keywords in _ENERGY_TIER_MAP.items():
+        if any(kw in energy_raw for kw in keywords):
+            detected_tier = tier
+            break
+    result["energy_tier"] = detected_tier
 
     # bg_color: raw dict'te yoksa (eski format / Sonnet üretmedi) energy'e göre default koy
     if "bg_color" not in raw or not raw.get("bg_color"):

@@ -1115,6 +1115,166 @@ _ENERGY_MARK_MAP = {
 }
 
 
+# ── HARF TABANLI PIL İKONLAR ──────────────────────────────────────────────────
+# Geometrik markların yerini alan, marka adının ilk harfini kullanan ikonlar.
+# Her birinin stüdyo DNA'sı var — "swap testi"ni geçen formlar.
+
+def _pil_icon_negative(first: str, pc: str, bg: str, ac: str, S: int = 640) -> Image.Image:
+    """
+    I-A: Primary renk blok, harf bg rengiyle oyulmuş.
+    Collins / Landor / Base Design / minimal.
+    Güçlü kontrast, negatif alan — harfin formu boşluktan ortaya çıkar.
+    """
+    img = Image.new("RGB", (S, S), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+    m = int(S * 0.06)
+    d.rectangle([m, m, S - m, S - m], fill=_pil_rgb(pc))
+    fs = int(S * 0.74)
+    f = _pil_font("display", fs)
+    bb = d.textbbox((0, 0), first, font=f)
+    tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
+    ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.03)
+    d.text((tx, ty), first, font=f, fill=_pil_rgb(bg))
+    # Accent bar — alt sol köşe (imza detayı)
+    bh = int(S * 0.048)
+    d.rectangle([m, S - m - bh, int(S * 0.40), S - m], fill=_pil_rgb(ac))
+    return img
+
+
+def _pil_icon_diagonal(first: str, pc: str, bg: str, ac: str, S: int = 640) -> Image.Image:
+    """
+    I-B: Harf primary renk, üzerinden diagonal şerit kesiyor.
+    Bureau Borsche / bold / energetic.
+    Hız, hareket, keskinlik — kesim hattı marka konseptiyle örtüşüyor.
+    """
+    img = Image.new("RGB", (S, S), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+    fs = int(S * 0.82)
+    f = _pil_font("display", fs)
+    bb = d.textbbox((0, 0), first, font=f)
+    tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
+    ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
+    d.text((tx, ty), first, font=f, fill=_pil_rgb(pc))
+    # Diagonal kesim şeridi — bg rengiyle üstüne yazıyor (harfi kesiyor)
+    cut_top = int(S * 0.16)
+    cut_bot = int(S * 0.40)
+    drop = int(S * 0.12)
+    d.polygon([
+        (0, cut_top), (S, cut_top - drop),
+        (S, cut_bot - drop), (0, cut_bot)
+    ], fill=_pil_rgb(bg))
+    # Accent çizgisi — kesim hattının üst kenarı
+    stripe_h = int(S * 0.026)
+    d.polygon([
+        (0, cut_top), (S, cut_top - drop),
+        (S, cut_top - drop + stripe_h), (0, cut_top + stripe_h)
+    ], fill=_pil_rgb(ac))
+    return img
+
+
+def _pil_icon_split(first: str, pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
+    """
+    I-C: Harf dikey ikiye bölünmüş, iki farklı renk.
+    Sagmeister & Walsh / playful / dynamic.
+    Çift kimlik, gerilim — iki rengin birliği ya da çatışması.
+    """
+    base = Image.new("RGB", (S, S), _pil_rgb(bg))
+    left = Image.new("RGB", (S, S), _pil_rgb(bg))
+    right = Image.new("RGB", (S, S), _pil_rgb(bg))
+    dl = ImageDraw.Draw(left)
+    dr = ImageDraw.Draw(right)
+    fs = int(S * 0.82)
+    f = _pil_font("display", fs)
+    bb = dl.textbbox((0, 0), first, font=f)
+    tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
+    ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
+    dl.text((tx, ty), first, font=f, fill=_pil_rgb(pc))
+    dr.text((tx, ty), first, font=f, fill=_pil_rgb(ac))
+    # Sol yarısı left'ten, sağ yarısı right'tan
+    base.paste(left.crop((0, 0, S // 2, S)), (0, 0))
+    base.paste(right.crop((S // 2, 0, S, S)), (S // 2, 0))
+    # Bölme çizgisi — bg rengiyle, ince
+    d2 = ImageDraw.Draw(base)
+    lw = max(2, S // 120)
+    d2.line([(S // 2, 0), (S // 2, S)], fill=_pil_rgb(bg), width=lw)
+    return base
+
+
+def _pil_icon_frame(first: str, pc: str, bg: str, ac: str, S: int = 640) -> Image.Image:
+    """
+    I-D: Harf primary renk, üst/alt accent şeritleri.
+    Pentagram / Wolff Olins / corporate / sistematik.
+    Net hiyerarşi, güven veren çerçeveleme.
+    """
+    img = Image.new("RGB", (S, S), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+    fs = int(S * 0.82)
+    f = _pil_font("display", fs)
+    bb = d.textbbox((0, 0), first, font=f)
+    tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
+    ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
+    d.text((tx, ty), first, font=f, fill=_pil_rgb(pc))
+    bar = int(S * 0.052)
+    d.rectangle([0, 0, S, bar], fill=_pil_rgb(ac))
+    d.rectangle([0, S - bar, S, S], fill=_pil_rgb(ac))
+    return img
+
+
+_LETTER_ICON_FNS = {
+    "A": _pil_icon_negative,
+    "B": _pil_icon_diagonal,
+    "C": _pil_icon_split,
+    "D": _pil_icon_frame,
+}
+
+_STUDIO_LETTER_ICON_MAP = {
+    "Collins":          "A",   # negative block — negatif alan = Collins imzası
+    "Bureau Borsche":   "B",   # diagonal cut — hız ve kültürel keskinlik
+    "Sagmeister&Walsh": "C",   # split — beklenmedik duality, kural kırma
+    "Pentagram":        "A",   # negative block — anlam yüklü negatif alan
+    "Landor":           "A",   # negative block — temiz, güven veren, kurumsal derinlik
+    "Wolff Olins":      "D",   # frame — sistemik, modüler çerçeve
+    "Base Design":      "A",   # negative block — minimal, yapısal kesinlik
+}
+
+_ENERGY_LETTER_ICON_MAP = {
+    "bold":      "B",   # diagonal cut
+    "urgent":    "B",
+    "energetic": "B",
+    "dynamic":   "C",   # split
+    "playful":   "C",
+    "cinematic": "A",   # negative block
+    "premium":   "A",
+    "luxury":    "A",
+    "editorial": "A",
+    "corporate": "D",   # frame
+    "minimal":   "A",
+}
+
+
+def _parse_icon_concept(concept: str) -> str:
+    """
+    Locked icon concept cümlesini parse et → harf ikon variant tipi döner.
+    Anatomik talimat → PIL variant eşlemesi.
+    """
+    if not concept:
+        return ""
+    c = concept.lower()
+    # Diagonal / kesim / şerit → B
+    if any(kw in c for kw in ["kes", "cut", "diagonal", "çapraz", "yatay şerit", "şerit", "dilim", "kesik"]):
+        return "B"
+    # Bölünme / iki renk / yarı → C
+    if any(kw in c for kw in ["böl", "split", "ikiye", "iki renk", "yarı", "left", "right", "sağ yarı", "sol yarı"]):
+        return "C"
+    # Çerçeve / bar / şerit üst+alt → D
+    if any(kw in c for kw in ["çerçeve", "frame", "bar", "bantlar", "şerit üst", "şerit alt", "üst ve alt"]):
+        return "D"
+    # Negatif alan / oyma / boşluk → A
+    if any(kw in c for kw in ["negatif", "oyul", "çıkar", "boşluk", "carved", "hollow", "iç boşluk", "dışarıdan"]):
+        return "A"
+    return ""  # tanımlanamadı → stüdyo/energy dispatch'e bırak
+
+
 def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
                    x: int, avail_w: int, area_top: int, area_h: int,
                    color: str) -> None:
@@ -1136,10 +1296,14 @@ def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
 
 # ── ANA LOGO ─────────────────────────────────────────────────────────────────
 
-def select_logo_primary_png(brief: dict, studio_label: str = "") -> str:
+def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dict | None = None) -> str:
     """
     ANA logo: PIL composition + Bebas Neue.
-    Stüdyo DNA'sına göre 5 template'den biri seçilir.
+    Seçim önceliği: pil_params["template"] → stüdyo map → energy_tier map → default A.
+
+    pil_params: Tasarım direktörünün PIL_LOGO kararı (html_preview.py parse eder).
+                {"template": "A"/"B"/"C"/"D"/"E"} — override yapar.
+
     PNG data URI döner (SVG yok, browser font yok).
     """
     name   = brief.get("brand_name", "BRAND").upper()
@@ -1148,14 +1312,34 @@ def select_logo_primary_png(brief: dict, studio_label: str = "") -> str:
     ac     = brief.get("accent_color") or sc
     bg     = brief.get("bg_color", "#0F0D0C")
     tag    = brief.get("tagline", "")
-    energy = str(brief.get("energy", "cinematic")).lower()
+    # energy_tier varsa daha granüler, yoksa eski energy'e bak
+    energy = str(brief.get("energy_tier", brief.get("energy", "cinematic"))).lower()
 
-    tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
+    # 1. Tasarım direktörü override (en yüksek öncelik)
+    tpl = (pil_params or {}).get("template", "")
+
+    # 2. Stüdyo eşlemesi
+    if not tpl:
+        tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
+
+    # 3. Energy_tier → template
+    if not tpl:
+        _ENERGY_TIER_TEMPLATE = {
+            "bold":      "A",  # color block — cesur, dolu
+            "luxury":    "B",  # dark statement — ağır, premium
+            "cinematic": "B",  # dark statement — dramatik zemin
+            "playful":   "E",  # offset block — hafif, asimetrik
+            "minimal":   "B",  # dark statement — sessiz güç
+        }
+        tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
+
+    # 4. Legacy energy keyword fallback (eski davranış korunuyor)
     if not tpl:
         for kw, t in _ENERGY_TEMPLATE_MAP.items():
             if kw in energy:
                 tpl = t
                 break
+
     if not tpl:
         tpl = "A"
 
@@ -1262,24 +1446,39 @@ def select_logo_mono_png(brief: dict) -> str:
 
 # ── İKON LOGO ─────────────────────────────────────────────────────────────────
 
-def select_logo_icon_png(brief: dict, studio_label: str = "") -> str:
+def select_logo_icon_png(brief: dict, studio_label: str = "", concept: str = "") -> str:
     """
-    İKON: Geometrik mark — sıfır typography, salt form.
-    Stüdyo veya energy'e göre 5 marktan biri seçilir.
+    İKON: Marka adının ilk harfi + stüdyo DNA stilizasyonu.
+    Öncelik: concept cümlesi → stüdyo map → energy map → default (A).
+
+    concept: _generate_locked_icon_concept() çıktısı — anatomik SVG talimatı.
+             Bu cümle parse edilerek harf ikon varyantı seçilir.
+
     PNG data URI döner.
     """
+    name = brief.get("brand_name", "BRAND")
+    first = (name[0] if name else "?").upper()
     pc = brief.get("primary_color", "#C9A25A")
     ac = brief.get("accent_color") or brief.get("secondary_color", "#8B8B7A")
     bg = brief.get("bg_color", "#0F0D0C")
-    en = str(brief.get("energy", "cinematic")).lower()
+    en = str(brief.get("energy_tier", brief.get("energy", "cinematic"))).lower()
 
-    key = _STUDIO_MARK_MAP.get(studio_label, "")
+    # 1. Concept cümlesinden parse et (en özgün, marka-spesifik)
+    key = _parse_icon_concept(concept)
+
+    # 2. Stüdyo eşlemesi
     if not key:
-        for kw, k in _ENERGY_MARK_MAP.items():
+        key = _STUDIO_LETTER_ICON_MAP.get(studio_label, "")
+
+    # 3. Energy_tier fallback
+    if not key:
+        for kw, k in _ENERGY_LETTER_ICON_MAP.items():
             if kw in en:
                 key = k
                 break
-    if not key:
-        key = "A"
 
-    return _png_uri(_MARK_FNS[key](pc, ac, bg))
+    if not key:
+        key = "A"  # default: negative block
+
+    fn = _LETTER_ICON_FNS.get(key, _pil_icon_negative)
+    return _png_uri(fn(first, pc, bg, ac))

@@ -240,16 +240,20 @@ _DESIGN_DIR_SYSTEM = """Sen bir tasarım direktörüsün — ajansın son kalite
 Strateji + kreatif kararları aldın. Her SVG için tasarımcıya direkt teslim edilecek teknik brief yaz.
 Tasarımcı bu brief'i okuyup yorumlamayacak — direkt uygulayacak.
 
-ÇIKTI FORMAT (5 bölüm başlığıyla — başka hiçbir şey yazma):
+ÇIKTI FORMAT (6 bölüm başlığıyla — başka hiçbir şey yazma):
+
+PIL_LOGO:
+TEMPLATE:[A/B/C/D/E — tek harf, yanında açıklama yok]
+[A=renk bloğu sol+accent sağ, B=koyu zemin+wordmark+accent çizgi, C=dev ilk harf+rest sağda, D=diagonal polygon+wordmark, E=offset dikdörtgen+wordmark]
 
 LOGO_PRIMARY:
-[800x280 viewBox. Koordinat düzeyinde talimat: hangi element nerede, renk bloğu kaç px, metin hangi x/y'de, font-weight, üst üste binen elemanlar. Tamamlanmamış/renksiz alan YASAK.]
+[Tasarım direktörü notu: LOGO_PRIMARY Python PIL ile üretiliyor, yukarıdaki TEMPLATE seçimi bunu yönlendirir. Burada sadece renk oranları veya kompozisyon önceliği belirt — koordinat verme.]
 
 LOGO_ICON:
-[320x320 viewBox. Harfin hangi kısmı nasıl kesiliyor, kesik boşluk hangi koordinatlarda, renk katmanları nasıl diziliyor. Koordinat düzeyinde.]
+[320x320 viewBox. Harfin hangi kısmı nasıl kesiliyor, kesik boşluk hangi koordinatlarda, renk katmanları nasıl diziliyor. Bu Python PIL ile üretilecek — ikon konsept kilitleme sistemine input oluyor.]
 
 LOGO_MONO:
-[800x280 viewBox. Logo primary'nin tek renk uyarlaması — şeffaf zemin, sadece metin rengi.]
+[MONO logo Python PIL ile üretiliyor — sadece renk notu ekle gerekirse.]
 
 APP1:
 [1080x1080 viewBox. Tagline'dan hangi kelimeler, her kelimenin y koordinatı, font-size (~130-160px), arka planda hangi renk bloğu/diagonal şerit nerede, alt kısımda marka adı kaç px.]
@@ -539,15 +543,22 @@ def generate_html_preview(brief: dict) -> tuple:
     locked_icon = _generate_locked_icon_concept(brief, client)
     brief["logo_icon_svg_brief"] = locked_icon
 
-    # ── Python SVG: logo_primary + logo_mono — AI yok, Python template ────────
+    # ── Python PIL: logo_primary + logo_mono + logo_icon — AI yok, Python template ──
     # Stüdyo kararını creative_output'tan parse et
     _studio_match = re.search(r'STÜDYO:\s*([A-Za-zÇŞĞÜÖçşğüöı &]+?)(?:\s*[—–-]|\s*$)', creative_output, re.MULTILINE)
     _studio_label = _studio_match.group(1).strip() if _studio_match else brief.get("studio_dna", {}).get("label", "")
 
+    # Tasarım direktörünün PIL_LOGO template kararını parse et
+    _pil_params: dict = {}
+    _pil_tpl_match = re.search(r'PIL_LOGO:\s*\nTEMPLATE:\s*([A-E])', design_output or "", re.MULTILINE)
+    if _pil_tpl_match:
+        _pil_params["template"] = _pil_tpl_match.group(1).strip()
+
     svgs = {
-        "logo_primary": select_logo_primary_png(brief, studio_label=_studio_label),
+        "logo_primary": select_logo_primary_png(brief, studio_label=_studio_label, pil_params=_pil_params or None),
         "logo_mono":    select_logo_mono_png(brief),
-        "logo_icon":    select_logo_icon_png(brief, studio_label=_studio_label),
+        # locked_icon concept → select_logo_icon_png'e aktar (Aşama 3 köprüsü)
+        "logo_icon":    select_logo_icon_png(brief, studio_label=_studio_label, concept=locked_icon),
     }
 
     # ── SVG Üretimi: Sonnet — sadece app1, app2 ───────────────────────────────
