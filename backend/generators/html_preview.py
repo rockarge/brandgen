@@ -274,11 +274,23 @@ RENKLER:
 viewBox="0 0 800 280". Arka plan: {bg} (ZORUNLU — değiştirme).
 Marka adı: "{name_safe}" — Türkçe karakterleri OLDUĞU GİBİ yaz (İ, Ş, Ğ, Ü, Ö, Ç desteklenir).
 Tüm ismi TEK <text> elementinde yaz. ASLA harf-harf bölme.
-FONT-SIZE SINIRI: {name_len} karakter → maksimum {max_font_logo}px. Bunu AŞ MA.
-Metin rengi {text}. Accent {primary}.
+FONT-SIZE SINIRI: {name_len} karakter → maksimum {max_font_logo}px. Bunu AŞMA.
 KAVRAMSAL ANCHOR: Logo konseptini ({logo_concept}) görsel forma çevir — şekil değil anlam.
 {studio_logo_guide}
-Wordmark: "metin + yatay çizgi" kombinasyonu YASAK. Konseptten türeyen form şart.
+
+TİPOGRAFİ ZORUNLULUĞU — bunu yapmazsan logo geçersizdir:
+Marka adı DÜZ METİN olarak yazılamaz. Şunlardan EN AZ BİRİNİ uygula:
+  • Bazı harfleri {primary} veya {secondary} rengiyle boyama (kalan harfler {text} rengi)
+  • Marka adının ARKASINA büyük renk bloğu, geometric şekil veya diagonal şerit (konseptten türeyen)
+  • Harfler arası veya harf içi negatif boşluktan form çıkarma
+  • Büyük/küçük harf veya ağırlık kombinasyonu (bazı harfler bold, bazıları light)
+  • Marka adının bir harfini ikonla (logo_icon) yer değiştirme — SVG <image> veya inline path kullan
+
+YASAK:
+✗ Sadece düz tek renkli metin + altına/üstüne yatay çizgi
+✗ "metin + sağında küçük sembol" kombinasyonu
+✗ Boş zemin üzerinde sadece metin
+Wordmark her zaman GRAFIK bir obje gibi davransın. Renk, form, kompozisyon — hepsi markaya özgü.
 ===END===
 
 ===SVG:logo_icon===
