@@ -106,17 +106,11 @@ def _logo_icon_prompt(brief: dict) -> str:
     concept   = brief.get("concept_statement", "")
     mood      = ", ".join(brief.get("mood_words", [])[:2])
 
-    sector    = brief.get("studio_dna", {}).get("sector", brief.get("sector", ""))
     style = "bold geometric playful" if energy == "playful" else "minimal premium geometric"
-    # Playful markalarda sektöre özgü ikon elemanlarını ekle, gıda/yemek çağrışımını engelle
-    sector_hint = ""
-    if energy == "playful" and sector:
-        sector_hint = f"Icon elements related to {sector} theme — art supplies, creativity, craft. NOT food, NOT pizza, NOT eating. "
     return (
         f'App icon mark for "{name}" brand. '
         f'Abstract geometric symbol built from the letter "{letter}". '
         f'{concept[:100] + ". " if concept else ""}'
-        f'{sector_hint}'
         f'{mood + ". " if mood else ""}'
         f'{style} design. '
         f'Colors: {primary} on {bg} background, {secondary} accent. '
