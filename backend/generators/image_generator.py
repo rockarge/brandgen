@@ -152,6 +152,7 @@ def _app1_prompt(brief: dict) -> str:
 def _app2_prompt(brief: dict) -> str:
     name      = _ascii_safe(brief.get("brand_name", "BRAND"))
     secondary = brief.get("secondary_color", "#888888")
+    primary   = brief.get("primary_color", "#333333")
     bg        = brief.get("bg_color", "#111111")
     energy    = brief.get("energy", "cinematic")
     concept   = brief.get("concept_statement", "")
@@ -160,15 +161,26 @@ def _app2_prompt(brief: dict) -> str:
     mood      = ", ".join(mood_raw[1:4]) if len(mood_raw) > 1 else ""
     visual    = brief.get("visual_language", "")[:100]
 
-    atm = "playful abstract geometric, bold colors, graphic" if energy == "playful" else "minimal bold editorial, abstract architectural"
+    if energy == "playful":
+        # Playful markalarda soyut geometri yerine marka dünyasını yansıtan sahne
+        atm = (
+            "vibrant flat illustration, bold graphic art, colorful pattern composition. "
+            f"Scattered creative tools, art supplies, paint splashes, stars and confetti. "
+            f"Joyful, chaotic, childlike energy. Bright {primary} and {secondary} on {bg} background. "
+            "NO characters. NO text. NO logo. Pure graphic surface pattern."
+        )
+    else:
+        atm = (
+            f"minimal bold editorial, abstract architectural composition. "
+            f"Dominant {secondary} on {bg} background. "
+            f"{mood + '. ' if mood else ''}"
+            "NO text. NO logo. Pure abstract or conceptual art."
+        )
     return (
-        f'Abstract brand identity visual for "{name}"{(" — " + sector) if sector else ""}. '
-        f'{atm} composition. '
-        f'{concept[:120] + ". " if concept else ""}'
+        f'Brand identity visual for "{name}"{(" — " + sector) if sector else ""}. '
+        f'{atm} '
+        f'{concept[:100] + ". " if concept else ""}'
         f'{visual + ". " if visual else ""}'
-        f'{mood + ". " if mood else ""}'
-        f'Dominant color: {secondary} on {bg} background. '
-        f'NO text. NO logo. NO product shots. Pure abstract or conceptual art. '
         f'Square 1:1 format, high quality.'
     ).strip()
 
@@ -215,16 +227,17 @@ async def _recraft_logo(prompt: str) -> str:
 
 
 async def _recraft_tipo(prompt: str) -> str:
-    """Recraft v3 — vector_illustration/flat_art stili. TİPO için (yaratıcı tipografik wordmark).
-    flat_art: grafik, geometrik, karakter sahnesine girme eğilimi daha düşük."""
+    """Recraft v3 — vector_illustration stili. TİPO için (yaratıcı tipografik wordmark).
+    Not: vector_illustration/flat_art Recraft API'sinde desteklenmiyor — vector_illustration kullan.
+    square_hd: landscape_16_9 Recraft'ta hata verebilir, square_hd daha kararlı."""
     try:
         result = await asyncio.to_thread(
             fal_client.run,
             "fal-ai/recraft-v3",
             arguments={
                 "prompt": prompt,
-                "image_size": "landscape_16_9",  # wordmark için yatay format
-                "style": "vector_illustration/flat_art",
+                "image_size": "square_hd",          # landscape_16_9 riskli, square_hd kararlı
+                "style": "vector_illustration",     # flat_art alt-stil Recraft API'sinde yok
                 "num_images": 1,
             },
         )
