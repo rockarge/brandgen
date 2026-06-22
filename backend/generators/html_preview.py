@@ -35,7 +35,6 @@ import anthropic
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
 from generators.logo_generator import select_logo_mono_png  # primary + icon artık Sonnet SVG
-from generators.image_generator import generate_app_images   # app1/app2 Pollinations.ai (paralel)
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
 
@@ -73,7 +72,7 @@ _SVG_SYSTEM = """Sen dünya klasmanında bir marka kimlik tasarımcısısın —
 Strateji direktörü, kreatif direktör ve tasarım direktörü üç ayrı aşamada karar verdi. Bu kararlar sana "AJANS KARAR BRİEFİ" başlığıyla gelecek.
 Görevin: her tasarım kararını SAF SVG'ye çevirmek. Template yok. Kalıp yok. Her marka özgün.
 
-TAM OLARAK 2 SVG BLOĞU üreteceksin: logo_primary, logo_icon
+TAM OLARAK 4 SVG BLOĞU üreteceksin: logo_primary, logo_icon, app1, app2
 Bloklar arasında başka HİÇBİR ŞEY yazma.
 
 ÇIKTI FORMAT — her SVG için bu bloğu kullan:
@@ -84,7 +83,19 @@ Bloklar arasında başka HİÇBİR ŞEY yazma.
 ===END===
 
 ===SVG:logo_icon===
-<svg xmlns="http://www.w3.org/2020/svg" viewBox="0 0 320 320">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  ... tasarım ...
+</svg>
+===END===
+
+===SVG:app1===
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+  ... tasarım ...
+</svg>
+===END===
+
+===SVG:app2===
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
   ... tasarım ...
 </svg>
 ===END===
@@ -140,6 +151,12 @@ STÜDYO DNA UYGULAMASI:
 - Pentagram → Anlam yüklü minimal. Negatif boşluk çalışır, her şeyin sebebi var.
 - Landor → Güven veren form. Net hiyerarşi, temiz oran, kurumsal güç.
 - Wolff Olins → İsim sistem olur. Renk kimlik taşır, modüler yapı.
+
+UYGULAMA GÖRSELLERİ — editorial design enerjisi:
+- app1 (1080x1080): Tagline'dan 2-3 kelime. Her kelime ayrı satır, devasa font.
+  Poster gibi çalışır, reklam gibi değil. Güçlü renk bloğu veya diagonal.
+- app2 (1080x1080): app1'den tamamen farklı dil. stroke-only büyük wordmark (fill="none").
+  Arka planda konseptten türeyen geometrik grid. Renk aksan bloğu köşede.
 
 Her element için sor: "Bu neden burada, ne anlatıyor?" — cevap yoksa sil."""
 
@@ -415,6 +432,11 @@ def _build_svg_prompt(brief: dict, design_output: str = "") -> str:
     # Türkçe karakterler (İ Ş Ğ vb.) birer karakter sayılır — len() doğru çalışır
     name_len = max(len(name), 1)
     max_font_logo = min(90, int(480 / (name_len * 0.65)))  # logo_primary: ~480px kullanılabilir genişlik
+    max_font_app2 = min(200, int(860 / (name_len * 0.65)))  # app2 stroke-only: 1080px - margin
+
+    tagline_words = [w for w in tagline.split() if w][:4]
+    max_tagline_word_len = max((len(w) for w in tagline_words), default=8)
+    max_font_app1 = min(160, int(900 / (max_tagline_word_len * 0.65)))
 
     # Studio DNA inject — hangi stüdyo atandıysa o stüdyonun tasarım dilini ver
     studio_dna = brief.get("studio_dna", {})
@@ -464,7 +486,7 @@ RENKLER:
   İkincil: {secondary}
   Vurgu 2: {accent2}
 
-2 SVG üreteceksin. Sırayla:
+4 SVG üreteceksin. Sırayla:
 
 ===SVG:logo_primary===
 viewBox="0 0 800 280". Zemin: {bg}.
@@ -481,6 +503,24 @@ viewBox="0 0 320 320". Zemin: {bg}.
 KİLİTLİ İKON KONSEPT (tasarım direktörü kararı — direkt uygula): {locked_icon_brief}
 YASAK: harf + çerçeve (kare/daire). Harfin kendi formu dönüşüm geçirmeli.
 AJANS KARAR BRİEFİ'nde LOGO_ICON bölümünü uygula.
+===END===
+
+===SVG:app1===
+viewBox="0 0 1080 1080". Zemin {bg}.
+Tagline'dan 2-3 kelime BÜYÜK, her kelime ayrı <text> satırında: "{tagline[:35]}"
+FONT-SIZE SINIRI: En uzun kelime {max_tagline_word_len} karakter → maksimum {max_font_app1}px. Bunu AŞMA.
+font-weight="900", {text} rengi. Her kelime için y değerini kademeli artır (300, 300+font-size, ...).
+Alt kısımda "{name_safe}" {primary} rengiyle, daha küçük (font-size 60-80).
+Güçlü renk bloğu veya diagonal şerit — {primary} veya {secondary} kullan.
+Sol üst veya sağ alt köşeye küçük geometrik aksan.
+===END===
+
+===SVG:app2===
+viewBox="0 0 1080 1080". app1'den tamamen farklı kompozisyon.
+"{name_safe}" büyük stroke-only (fill="none", stroke="{primary}", stroke-width="10", font-size {max_font_app2}px MAX).
+FONT-SIZE SINIRI: "{name_safe}" = {name_len} karakter → maksimum {max_font_app2}px. Bunu AŞMA.
+Arka planda tekrarlayan geometrik grid veya pattern ({secondary} rengi, çok düşük opacity ~0.08).
+Renk aksan bloğu (sağ alt veya sol üst köşe, {primary}).
 ===END==="""
 
 
@@ -582,7 +622,7 @@ def generate_html_preview(brief: dict) -> tuple:
     # ── SVG Üretimi: Sonnet — logo_primary, logo_icon ────────────────────────
     svg_response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=6000,  # 2 SVG (logo_primary + logo_icon) — app1/app2 artık Pollinations.ai
+        max_tokens=10000,  # 4 SVG: logo_primary, logo_icon, app1, app2
         system=_SVG_SYSTEM,
         messages=[{"role": "user", "content": _build_svg_prompt(brief, design_output)}],
     )
@@ -592,8 +632,6 @@ def generate_html_preview(brief: dict) -> tuple:
     sonnet_svgs.pop("logo_mono", None)  # mono PIL'den geliyor, override etme
     svgs.update(sonnet_svgs)
 
-    # ── Uygulama görselleri: Pollinations.ai — paralel istek (ikisi aynı anda) ────
-    svgs["app1"], svgs["app2"] = generate_app_images(brief)
 
     html_token_usage = {
         "input_tokens": svg_response.usage.input_tokens,
