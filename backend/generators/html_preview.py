@@ -34,10 +34,7 @@ import colorsys
 import anthropic
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
-from generators.logo_generator import (
-    select_logo_primary_png, select_logo_mono_png,
-    select_logo_icon_png,
-)
+from generators.logo_generator import select_logo_mono_png  # primary + icon artık Sonnet SVG
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
 
@@ -71,67 +68,97 @@ def _is_dark(hex_color: str) -> bool:
     luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return luminance < 0.5
 
-_SVG_SYSTEM = """Sen bir ajansın kıdemli uygulayıcı tasarımcısısın.
-Strateji direktörü, kreatif direktör ve tasarım direktörü üç ayrı aşamada karar verdi — bu kararlar sana "AJANS KARAR BRİEFİ" başlığıyla gelecek.
-Senin görevin: icat etmeden uygulamak. Brief'te yazılı her talimatı eksiksiz SVG'ye çevir. Kendi grafik kararın yok — direktörlerin kararı var.
-Tam olarak 5 SVG tasarımı üreteceksin.
+_SVG_SYSTEM = """Sen dünya klasmanında bir marka kimlik tasarımcısısın — Collins, Bureau Borsche ve Pentagram'dan geçmiş biri.
+Strateji direktörü, kreatif direktör ve tasarım direktörü üç ayrı aşamada karar verdi. Bu kararlar sana "AJANS KARAR BRİEFİ" başlığıyla gelecek.
+Görevin: her tasarım kararını SAF SVG'ye çevirmek. Template yok. Kalıp yok. Her marka özgün.
+
+TAM OLARAK 4 SVG BLOĞU üreteceksin: logo_primary, logo_icon, app1, app2
+Bloklar arasında başka HİÇBİR ŞEY yazma.
 
 ÇIKTI FORMAT — her SVG için bu bloğu kullan:
+===SVG:logo_primary===
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280">
+  ... tasarım ...
+</svg>
+===END===
+
 ===SVG:logo_icon===
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
   ... tasarım ...
 </svg>
 ===END===
 
-2 blok üreteceksin: app1, app2
-logo_primary, logo_mono ve logo_icon sistem tarafından Python ile üretiliyor — sen bunları ÜRETME.
-Bloklar arasında başka HİÇBİR ŞEY yazma.
+===SVG:app1===
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+  ... tasarım ...
+</svg>
+===END===
 
-SVG TEKNİK KURALLAR:
+===SVG:app2===
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+  ... tasarım ...
+</svg>
+===END===
+
+SVG TEKNİK KURALLAR (ihlal = geçersiz tasarım):
 - Her açılan tag kapanmalı: <text>KAYA</text> ✓ / <text>KAYA<text> ✗
-- Marka adındaki özel karakterler (İ Ş Ğ Ü Ö Ç) direkt UTF-8 olarak yaz — SVG bunu destekler, dönüştürme
-- viewBox dışına taşan element yazma
-- Font-family SVG içinde belirtme — sistem san-serif yeterli
-- Türkçe karakter içeren kelimeleri ASLA letter-by-letter ayrı <text> elementine bölme
-  YANLIŞ: <text>Ş</text><text>İ</text><text>P</text> → DOĞRU: <text>ŞİPŞAK</text> (tek element)
+- Türkçe karakterler (İ Ş Ğ Ü Ö Ç) direkt UTF-8 — dönüştürme, base64 yok
+- viewBox dışına taşan element YOK
+- font-family SVG içinde belirtme — font-family="sans-serif" yeterli
+- Türkçe kelimeyi ASLA letter-by-letter ayırma → <text>VOLKAN</text> (tek element)
+- Her <text> elementi için dominant-baseline="auto" ve text-anchor="start/middle/end" belirt
 
-UYGULAMA SIRASI — her logo için:
-1. "AJANS KARAR BRİEFİ" bölümündeki ilgili SVG talimatını oku
-2. O talimattaki koordinat, renk, form ve kompozisyon kararlarını direkt uygula
-3. Brief'te yazılmayan hiçbir şeyi ekleme — brief'te yazan her şeyi ekle
+UYGULAMA SIRASI:
+1. "AJANS KARAR BRİEFİ" bölümündeki her tasarım kararını oku
+2. O kararları eksiksiz uygula — yorumlama, direkt çevir
+3. Brief'te yazan her şeyi ekle, yazmayanı ekleme
 
-SWAP TESTİ — geçmeden teslim etme:
-"Bu logoyu başka bir markaya koyabilir miyim?" → Eğer evet, tasarımı sil ve baştan başla.
-Logo bu markaya ÖZGÜ olmalı. Genel "modern streetwear" logosu değil.
+SWAP TESTİ — bu teslimatta zorunlu:
+"Bu logo_primary başka bir markaya koyabilir miyim?" → Evet ise baştan yaz.
+"Bu logo_icon başka bir sektörde çalışır mı?" → Evet ise baştan yaz.
+Her tasarım bu markaya ÖZGÜ olmalı. Jenerik = geçersiz.
 
-KESİN YASAKLAR (bunları yapan tasarım geçersiz):
-- Harf/monogram içinde ya da etrafında dörtgen/daire çerçeve — bu 2010 tarzı, yasaklı
-- "metin + yatay çizgi + küçük altyazı" kombinasyonu — template, tasarım değil
-- İnce dekoratif çizgi, küçük nokta serpme, rastgele geometri
-- Boş zemin üzerine sadece metin
-- "BRAND IDENTITY", "EST. 2024" gibi placeholder metinler
-- Rastgele geometric accent shape — her şeklin konseptle bağı olsun
+KESİN YASAKLAR (bunları yapan tasarım geçersiz sayılır):
+- Harf/monogram etrafında dörtgen veya daire çerçeve — 2010 tarzı, yasaklı
+- "marka adı + yatay çizgi + küçük altyazı" kombinasyonu — template, değil tasarım
+- İnce dekoratif çizgi, nokta serpme, rastgele geometrik accent
+- Zemin üzerine sadece düz metin — başka bir karar olmadan
+- Placeholder metinler: "BRAND IDENTITY", "EST. 2024", "SINCE", "LLC"
+- Gradient fill (linear-gradient, radial-gradient) — düz renkler kullan
 
-STÜDYO DNA UYGULAMASI:
-- Collins → Harfin kendi geometrisini kır, grid sistemini görünür kıl, renk bloğu harfi taşısın
-- Bureau Borsche → Tipografi BİR grafik obje gibi davransın. Dev, çarpıcı, kültürel punch
-- Sagmeister & Walsh → Beklenmedik ölçek ve angle. Metin + form çakışabilir, kural kırılabilir
-- Pentagram → Harfin içinde gizli anlam. Negatif boşluk çalıştır. Minimal ama derin
-- Landor → Formun kendisi güven verir. Net hiyerarşi, her eleman kendi yerinde
-- Wolff Olins → İsim SİSTEM olur. Renk kimliği taşır, harfler modüler sisteme dönüşür
+LOGO_PRIMARY için (800x280) — wordmark kuralı:
+Marka adı tek seyirde okunmalı. Ama nasıl gösterildiği kararı burada.
+Seçenekler (brief'te hangisi belirtildiyse):
+• Renk bloğu kesiyor — dikdörtgen primary renk, içinde beyaz/koyu wordmark
+• Büyük harf parçalanıyor — ilk veya son harf ayrışıyor, farklı renk/ağırlık alıyor
+• Wordmark + güçlü accent element — accent shape harften türemiş olmalı
+• Diagonal şerit altında/üstünde metin — çapraz renk alanı
+Kendi gerekçen yoksa: "Brief'te yazan kararı uygula."
 
 LOGO_ICON için (320x320) — monogram kuralı:
-YASAK: harf + dörtgen/daire çerçeve
-DOĞRU: Harfin kendi formundan türeyen sembol. Harfi kesen şekil. Harfin içindeki boşluktan doğan form.
-Konsept metaforu burada en saf haliyle olsun.
+YASAK: harf + kare/daire çerçeve (FedEx'in çerçevesi yok — FedEx'in içinde ok var)
+DOĞRU: Harfin KENDI FORMUNDAN türeyen sembol.
+• Harfi kes — kesik boşluk anlam taşısın (Apple logosundaki ısırık gibi)
+• İki harf arasında zaten var olan boşluktan form çıkar (FedEx'in oku gibi)
+• Harfin iç boşluğunu kullan (B'nin içindeki yuvarlaklar bir şeye dönüşsün)
+• Harfleri birleştir — birleşim noktasından yeni form doğsun
+Locked icon concept brief'te belirtilmişse: O talimatı direkt uygula.
+
+STÜDYO DNA UYGULAMASI:
+- Collins → Renk BLOK olarak konuşur. Grid görünür. Harf sisteme girer.
+- Bureau Borsche → Tipografi grafik obje. Dev font, kültürel referans, sürpriz oran.
+- Sagmeister & Walsh → Kural kır. Beklenmedik ölçek, çakışma kabul, sürpriz angle.
+- Pentagram → Anlam yüklü minimal. Negatif boşluk çalışır, her şeyin sebebi var.
+- Landor → Güven veren form. Net hiyerarşi, temiz oran, kurumsal güç.
+- Wolff Olins → İsim sistem olur. Renk kimlik taşır, modüler yapı.
 
 UYGULAMA GÖRSELLERİ — editorial design enerjisi:
-- app1 (1080x1080): Tagline'dan en güçlü 2-3 kelime, her kelime ayrı satırda, devasa boyut.
-  Arka plan renk bloğu veya diagonal şerit. Kompozisyon poster gibi çalışsın, reklam gibi değil.
-- app2 (1080x1080): app1'den tamamen farklı dil. Marka adı büyük stroke-only (fill="none").
-  Arka planda konseptten türeyen tekrarlayan element. Renk aksan bloğu köşede.
+- app1 (1080x1080): Tagline'dan 2-3 kelime. Her kelime ayrı satır, devasa font.
+  Poster gibi çalışır, reklam gibi değil. Güçlü renk bloğu veya diagonal.
+- app2 (1080x1080): app1'den tamamen farklı dil. stroke-only büyük wordmark (fill="none").
+  Arka planda konseptten türeyen geometrik grid. Renk aksan bloğu köşede.
 
-Her eleman için kendine sor: "Bu element neden burada, ne anlatıyor?" — cevabı yoksa siliyorsun."""
+Her element için sor: "Bu neden burada, ne anlatıyor?" — cevap yoksa sil."""
 
 
 def _ascii_safe(name: str) -> str:
@@ -190,15 +217,27 @@ def _run_strategy_director(brief: dict, client) -> str:
         return f"ÖZSÖZ: {concept}\nBOŞLUK: Sektörde özgün görsel konum\nGERİLİM: Hız ve güven"
 
 
-_CREATIVE_DIR_SYSTEM = """Sen bir kreatif direktörüsün. Bureau Borsche, Collins, Sagmeister&Walsh seviyesinde iş çıkarmış birisin.
-Strateji analizini ve brand brief'i okudun. 5 grafik karar vereceksin.
+_CREATIVE_DIR_SYSTEM = """Sen kreatif direktörüsün. Bureau Borsche, Collins, Sagmeister&Walsh, Pentagram geçmişi.
+Sana gelen her marka için kural kıran, kalıp reddeden, özgün grafik kararlar veriyorsun.
 
-ÇIKTI FORMAT (sadece bu 5 satır — başka hiçbir şey):
-STÜDYO: <Collins/Bureau Borsche/Sagmeister&Walsh/Pentagram/Landor/Wolff Olins — tek cümle gerekçe>
-WORDMARK: <wordmark için TEK grafik karar — renk bloğu mu kesiyor, harf büyütülüyor mu, iki katmanlı mı, harfler birleşiyor mu?>
-İKON: <ikon için TEK anatomik karar — hangi harf, nasıl dönüştürülüyor, ne anlam taşıyor?>
-UYGULAMA1: <1080x1080 için vizyon — hangi kelime/kelimeler, nasıl dizilim, hangi grafik dil, renk dağılımı?>
-UYGULAMA2: <1080x1080 farklı dil — stroke-only wordmark + hangi pattern/grid + köşe aksanı nerede?>"""
+TEMEL KURAL: Jenerik çözüm = başarısız çözüm. Bu brief'e ve sadece bu markaya özgü 5 karar.
+
+SWAP TESTİ ZORUNLU: Her kararından önce sor: "Bu karar başka bir markaya da verilmiş olabilir mi?" → Evet ise değiştir.
+
+STÜDYO SEÇİMİ KURALI:
+- Collins seç: Renk sistemi kimlik taşıyorsa, grid dominant olacaksa
+- Bureau Borsche seç: Tipografi grafik obje gibi çalışacaksa, kültürel referans varsa
+- Sagmeister&Walsh seç: Kural kırılacaksa, beklenti tersine çevrilecekse
+- Pentagram seç: Negatif boşluk anlam taşıyacaksa, minimal ama derin olacaksa
+- Landor seç: Güven + otorite + kurumsal güç gerekiyorsa
+- Wolff Olins seç: Sistem tasarımı, modüler yapı, renk kimlik olacaksa
+
+ÇIKTI FORMAT (sadece bu 5 satır — açıklama yazma, karar yaz):
+STÜDYO: <stüdyo adı — neden bu marka için bu stüdyo, tek cümle>
+WORDMARK: <bu markaya ÖZGÜ tek grafik karar — ne yapılacağını söyle, nasıl göründüğünü tarif et>
+İKON: <harfin anatomisinden türeyen özgün dönüşüm — ekleme değil dönüştürme>
+UYGULAMA1: <1080x1080 poster — hangi kelime/kelimeler, dizilim, grafik dil, renk, beklenmedik unsur>
+UYGULAMA2: <1080x1080 tamamen farklı dil — stroke, pattern, köşe aksanı, bu markanın DNA'sı>"""
 
 
 def _run_creative_director(brief: dict, strategy_output: str, client) -> str:
@@ -236,30 +275,34 @@ def _run_creative_director(brief: dict, strategy_output: str, client) -> str:
         )
 
 
-_DESIGN_DIR_SYSTEM = """Sen bir tasarım direktörüsün — ajansın son kalite kapısısın. Sana gelen her tasarım buradan geçmeden teslim edilmez.
-Strateji + kreatif kararları aldın. Her SVG için tasarımcıya direkt teslim edilecek teknik brief yaz.
-Tasarımcı bu brief'i okuyup yorumlamayacak — direkt uygulayacak.
+_DESIGN_DIR_SYSTEM = """Sen bir tasarım direktörüsün — ajansın son kalite kapısısın. Her tasarım buradan geçmeden teslim edilmez.
+Strateji + kreatif kararları aldın. Tasarımcıya direkt teslim edilecek SVG teknik brief yaz.
+Tasarımcı yorumlamıyor — direkt uygulayacak. Koordinat, renk, form, oran — hepsi net.
 
-ÇIKTI FORMAT (6 bölüm başlığıyla — başka hiçbir şey yazma):
-
-PIL_LOGO:
-TEMPLATE:[A/B/C/D/E — tek harf, yanında açıklama yok]
-[A=renk bloğu sol+accent sağ, B=koyu zemin+wordmark+accent çizgi, C=dev ilk harf+rest sağda, D=diagonal polygon+wordmark, E=offset dikdörtgen+wordmark]
+ÇIKTI FORMAT (4 bölüm — başka hiçbir şey yazma):
 
 LOGO_PRIMARY:
-[Tasarım direktörü notu: LOGO_PRIMARY Python PIL ile üretiliyor, yukarıdaki TEMPLATE seçimi bunu yönlendirir. Burada sadece renk oranları veya kompozisyon önceliği belirt — koordinat verme.]
+[800x280 viewBox. Wordmark için net SVG talimatı.
+Hangi grafik karar: renk bloğu mu (dikdörtgen x/y/width/height belirt, renk), diagonal mı, harf ayrışması mı?
+Metin x/y koordinatları, font-size (max limit aşılmaz), font-weight, fill rengi.
+Arka plan fill rengi (bg_color).
+YASAK: sadece düz metin — mutlaka grafik bir karar var.]
 
 LOGO_ICON:
-[320x320 viewBox. Harfin hangi kısmı nasıl kesiliyor, kesik boşluk hangi koordinatlarda, renk katmanları nasıl diziliyor. Bu Python PIL ile üretilecek — ikon konsept kilitleme sistemine input oluyor.]
-
-LOGO_MONO:
-[MONO logo Python PIL ile üretiliyor — sadece renk notu ekle gerekirse.]
+[320x320 viewBox. Harfin anatomisinden türeyen dönüşüm.
+Hangi harf, harfin hangi bölümü nasıl kesiliyor veya dönüştürülüyor.
+Kesim koordinatları (polygon/path/clip), renk katmanları (fill renk, bg renk).
+Ekleme değil — harfin kendi formu dönüşüm geçiriyor.]
 
 APP1:
-[1080x1080 viewBox. Tagline'dan hangi kelimeler, her kelimenin y koordinatı, font-size (~130-160px), arka planda hangi renk bloğu/diagonal şerit nerede, alt kısımda marka adı kaç px.]
+[1080x1080 viewBox. Tagline'dan 2-3 kelime. Her kelimenin y koordinatı, font-size (max sınır belirtilecek), font-weight="900", fill rengi.
+Arka planda: hangi renk bloğu (x/y/width/height), diagonal şerit mi (polygon koordinatları), renk.
+Alt kısımda marka adı: y koordinatı, font-size 60-80px, fill rengi.]
 
 APP2:
-[1080x1080 viewBox. Stroke-only büyük wordmark — fill=none, stroke-width kaç, arka planda hangi pattern tipi, rengi, yoğunluğu, köşe renk aksanı nerede ve kaç px.]"""
+[1080x1080 viewBox. Stroke-only wordmark: font-size (max sınır), fill="none", stroke rengi, stroke-width kaç px.
+Arka planda pattern tipi (grid/diagonal/radial), renk, opacity değeri.
+Köşe renk aksanı: hangi köşe, rect koordinatları, renk, boyut.]"""
 
 
 def _run_design_director(brief: dict, strategy_output: str, creative_output: str, client) -> str:
@@ -425,8 +468,11 @@ def _build_svg_prompt(brief: dict, design_output: str = "") -> str:
             f"{sep}\n\n"
         )
 
+    # Locked icon concept — brief'ten al (generate_html_preview tarafından inject edildi)
+    locked_icon_brief = brief.get("logo_icon_svg_brief", logo_concept)
+
     return f"""{agency_block}MARKA: {name_safe}
-STÜDYO DNA: {studio_label} ({studio_sector})
+STÜDYO DNA: {studio_label} ({studio_sector}) → {studio_logo_guide}
 ENERJİ: {energy}
 TAGLINE: {tagline}
 KONSEPT: {concept}
@@ -440,7 +486,24 @@ RENKLER:
   İkincil: {secondary}
   Vurgu 2: {accent2}
 
-NOT: logo_primary, logo_mono ve logo_icon sistem tarafından üretildi — sen SADECE 2 SVG üreteceksin:
+4 SVG üreteceksin. Sırayla:
+
+===SVG:logo_primary===
+viewBox="0 0 800 280". Zemin: {bg}.
+Wordmark: "{name_safe}"
+FONT-SIZE SINIRI: {name_len} karakter → maksimum {max_font_logo}px. Bu sınırı AŞMA (taşar).
+AJANS KARAR BRİEFİ'nde LOGO_PRIMARY ve WORDMARK bölümlerini uygula.
+Stüdyo: {studio_label} → {studio_logo_guide}
+YASAK: düz zemin üzerine sadece metin. Mutlaka bir grafik karar var (renk bloğu/diagonal/form/ölçek oynaması).
+===END===
+
+===SVG:logo_icon===
+viewBox="0 0 320 320". Zemin: {bg}.
+İlk harf: "{first_letter}" — bu harfin anatomisinden türeyen sembol.
+KİLİTLİ İKON KONSEPT (tasarım direktörü kararı — direkt uygula): {locked_icon_brief}
+YASAK: harf + çerçeve (kare/daire). Harfin kendi formu dönüşüm geçirmeli.
+AJANS KARAR BRİEFİ'nde LOGO_ICON bölümünü uygula.
+===END===
 
 ===SVG:app1===
 viewBox="0 0 1080 1080". Zemin {bg}.
@@ -543,37 +606,30 @@ def generate_html_preview(brief: dict) -> tuple:
     locked_icon = _generate_locked_icon_concept(brief, client)
     brief["logo_icon_svg_brief"] = locked_icon
 
-    # ── Python PIL: logo_primary + logo_mono + logo_icon — AI yok, Python template ──
-    # Stüdyo kararını creative_output'tan parse et
+    # ── Stüdyo label'ını creative_output'tan parse et (SVG prompt için inject) ─
     _studio_match = re.search(r'STÜDYO:\s*([A-Za-zÇŞĞÜÖçşğüöı &]+?)(?:\s*[—–-]|\s*$)', creative_output, re.MULTILINE)
     _studio_label = _studio_match.group(1).strip() if _studio_match else brief.get("studio_dna", {}).get("label", "")
+    # Brief'e stüdyo label'ını yaz — _build_svg_prompt içinde kullanılır
+    if _studio_label:
+        brief.setdefault("studio_dna", {})["label"] = _studio_label
 
-    # Tasarım direktörünün PIL_LOGO template kararını parse et
-    _pil_params: dict = {}
-    _pil_tpl_match = re.search(r'PIL_LOGO:\s*\nTEMPLATE:\s*([A-E])', design_output or "", re.MULTILINE)
-    if _pil_tpl_match:
-        _pil_params["template"] = _pil_tpl_match.group(1).strip()
-
+    # ── Python PIL: SADECE logo_mono (basit beyaz wordmark) ──────────────────
+    # logo_primary ve logo_icon artık Sonnet SVG üretiyor — PIL kaldırıldı
     svgs = {
-        "logo_primary": select_logo_primary_png(brief, studio_label=_studio_label, pil_params=_pil_params or None),
-        "logo_mono":    select_logo_mono_png(brief),
-        # locked_icon concept → select_logo_icon_png'e aktar (Aşama 3 köprüsü)
-        "logo_icon":    select_logo_icon_png(brief, studio_label=_studio_label, concept=locked_icon),
+        "logo_mono": select_logo_mono_png(brief),
     }
 
-    # ── SVG Üretimi: Sonnet — sadece app1, app2 ───────────────────────────────
+    # ── SVG Üretimi: Sonnet — logo_primary, logo_icon, app1, app2 ─────────────
     svg_response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=7000,
+        max_tokens=10000,  # 4 SVG için artırıldı (7000'den)
         system=_SVG_SYSTEM,
         messages=[{"role": "user", "content": _build_svg_prompt(brief, design_output)}],
     )
     svg_raw = svg_response.content[0].text
-    # Sonnet çıktısını merge et — sadece app1, app2 alınır (logo'lar Python'dan)
+    # Sonnet çıktısından logo_primary, logo_icon, app1, app2 al
     sonnet_svgs = _extract_svgs(svg_raw, bg_color=brief["bg_color"])
-    sonnet_svgs.pop("logo_primary", None)
-    sonnet_svgs.pop("logo_mono", None)
-    sonnet_svgs.pop("logo_icon", None)
+    sonnet_svgs.pop("logo_mono", None)  # mono PIL'den geliyor, override etme
     svgs.update(sonnet_svgs)
 
     html_token_usage = {
