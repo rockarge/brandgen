@@ -46,6 +46,11 @@ DEFAULTS: dict[str, Any] = {
     "logo_concept":         "",
     "logo_versions":        [],
 
+    # fal.ai image prompts — Sonnet tarafından üretilen, Recraft v3 için optimize edilmiş İngilizce
+    # Boşsa image_generator.py fallback prompt kullanır
+    "fal_logo_prompt":      "",   # logo_primary slot için Recraft prompt
+    "fal_icon_prompt":      "",   # logo_icon slot için Recraft prompt
+
     # Strateji — brand_brief.py Sonnet üretimi
     "brand_story":          "",
     "brand_story_preview":  "",

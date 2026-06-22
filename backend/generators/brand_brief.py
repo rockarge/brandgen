@@ -281,7 +281,9 @@ Bu markayı analiz et. Önce 4 katmanlı zihinsel süreçten geç (Situation →
     "İkinci sektör klişesi — farklı bir cliché formatı"
   ],
   "social_post_1_caption": "Gerçek sosyal medya postu — markanın sesinde, platform tonunda",
-  "social_post_2_caption": "Farklı içerik türü veya bakış açısı — ikinci post"
+  "social_post_2_caption": "Farklı içerik türü veya bakış açısı — ikinci post",
+  "fal_logo_prompt": "Recraft v3 için İngilizce prompt — logo_primary slot (wordmark/primary logo). Kurallar: (1) İngilizce yaz, (2) 'vector logo for [BRAND NAME]' ile başla, (3) logo_concept'teki görsel metaforu ve primitif formu İngilizce olarak somutlaştır, (4) exact renk kodlarını yaz (primary_color dominant), (5) bg_color'u belirt, (6) 'No gradients. No shadows. No text other than brand name. Vector illustration.' ile bitir. Max 3 cümle. Örnek: 'Vector logo for VOLT electric scooter brand. Letter V with integrated lightning bolt as negative space — bold diagonal cut creates speed arrow. Electric yellow #F0C832 on dark slate #1A1E2E. No gradients. No shadows. Vector illustration.'",
+  "fal_icon_prompt": "Recraft v3 için İngilizce prompt — logo_icon slot (app icon / mark). Kurallar: (1) İngilizce yaz, (2) 'App icon for [BRAND NAME]' ile başla, (3) logo_icon_svg_brief'teki geometri talimatını İngilizce ve Recraft'a uygun şekilde ifade et, (4) 'No text. Square format. Scalable geometric shape.' ekle, (5) exact renk kodlarını yaz. Max 3 cümle. Örnek: 'App icon for VOLT brand. Letter V with diagonal lightning bolt bisecting the form — the negative space reads as a directional arrow implying speed. Electric yellow #F0C832 on dark slate #1A1E2E. No text. Square format. Vector illustration.'"
 }}"""
 
 
