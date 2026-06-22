@@ -293,7 +293,7 @@ Bu markayı analiz et. Önce 4 katmanlı zihinsel süreçten geç (Situation →
 # ─────────────────────────────────────────────────────────────────────────────
 
 CRITIQUE_SYSTEM = """Sen sert ve tarafsız bir marka stratejisi kalite denetçisisin.
-Görevin: verilen brief alanlarını 4 kalite kapısından geçirmek.
+Görevin: verilen brief alanlarını 6 kalite kapısından geçirmek.
 Başarısız olan alanları yeniden yaz. Geçen alanları AYNEN koru — değiştirme.
 
 Yanıtın: sadece başarısız alanları içeren JSON. Başka hiçbir şey yazma.
@@ -311,8 +311,9 @@ voice_we_not_1: "{voice_we_not_1}"
 voice_we_not_2: "{voice_we_not_2}"
 brand_story_preview: "{brand_story_preview}"
 logo_concept: "{logo_concept}"
+logo_icon_svg_brief: "{logo_icon_svg_brief}"
 
-─── 5 KALİTE KAPISI ───
+─── 6 KALİTE KAPISI ───
 
 KAPI 1 — SWAP TEST (concept_statement):
 Soru: Bu cümle, aynı sektördeki başka bir markaya da uyar mı?
@@ -344,11 +345,26 @@ Eksik veya jenerikse → BAŞARISIZ. Yeniden yaz: Apple ısırığı ve FedEx ok
 ✗ "Modern bir font ile marka adı, arka planda geometrik şekil" → jenerik, herhangi bir markaya uyar
 ✓ "Metafor: Anlık karar anı — bir düğmeye basma hareketi; Form: diagonal kesik çizgi Ş harfini ikiye böler (2 eleman); Negatif alan: kesik içinde gizli ok, ileriyi işaret eder; Swap engeli: sadece Ş'nin dekonstrüksiyonu bu markaya ait" → özgün, uygulanabilir
 
+KAPI 6 — İKON SVG TALİMATI (logo_icon_svg_brief):
+Soru: Bu talimat doğrudan SVG'ye çevrilebilir mi? "Harf + ekleme" yapıyor mu? Başka markaya uyabilir mi?
+BAŞARISIZ koşullar (herhangi biri):
+  ✗ Eklenti mantığı: mevcut harfin dışına/üstüne/yanına bir eleman yapıştırılıyor ("ok ekle", "çizgi ekle", "nokta koy")
+  ✗ Soyut/jenerik: "modern minimal sembol", "hız ikonu", "zarif harf", "dinamik form"
+  ✗ Swap geçemez: aynı ikon başka kurye/hız markasına koyulabilir
+  ✗ SVG'ye çevrilemiyor: geometrik tarif yok, sadece estetik kelimeler var
+BAŞARISIZ → Yeniden yaz. Şu üç yaklaşımdan birini kullan:
+  1. Harfin bir bölümünü KES → kesik/boşluk anlam taşısın (Apple ısırığı modeli — ekleme değil çıkarma)
+  2. Harfin iç boşluğunu (counter/negative space) somut bir forma dönüştür (FedEx modeli — varolan boşluğu oku)
+  3. İki harfi birleştir → birleşim noktasından yeni form doğsun
+✗ "Ş harfinin cedilla'sına turuncu ok ekle" → eklenti, yasak
+✓ "Ş harfinin üst yatay çubuğu 40° açıyla kesilir; kesik boşluk sağ-yukarı yönünde ok oluşturur — negatif alan, ekleme değil çıkarma; cedilla bu sefer sol-aşağı okur, çift yön sadece Ş anatomisinde var" → harften doğan, geometrik, swap-proof
+
 ─── ÇIKTI FORMATI ───
 Sadece başarısız alanlar için JSON döndür. Örnek:
 {{
   "concept_statement": "Yeniden yazılmış versiyon",
-  "logo_concept": "Yeniden yazılmış logo konsepti"
+  "logo_concept": "Yeniden yazılmış logo konsepti",
+  "logo_icon_svg_brief": "Yeniden yazılmış ikon talimatı"
 }}
 Tüm kapılar geçtiyse: {{}}"""
 
@@ -388,11 +404,12 @@ def critique_brief(brief: dict, prompt: str, studio: dict) -> tuple[dict, dict]:
         voice_we_not_2=vwn2,
         brand_story_preview=brief.get("brand_story_preview", "")[:300],  # token limiti
         logo_concept=brief.get("logo_concept", "")[:400],  # token limiti
+        logo_icon_svg_brief=brief.get("logo_icon_svg_brief", "")[:300],  # token limiti
     )
 
     message = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=800,  # Sadece başarısız alanları yazar — kısa çıktı yeterli
+        max_tokens=1000,  # 6. kapı eklendi — biraz daha alan gerekli
         system=CRITIQUE_SYSTEM,
         messages=[{"role": "user", "content": user_content}],
     )
