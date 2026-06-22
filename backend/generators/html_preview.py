@@ -85,7 +85,9 @@ def generate_html_preview(brief: dict) -> tuple:
 
     # fal.ai: logo_primary, logo_tipo, logo_icon (Recraft v3), app1, app2 (Flux JPEG)
     fal_images = generate_all_images(brief)
-    svgs["logo_tipo"] = fal_images.get("logo_tipo", "")
+    svgs["logo_primary"] = fal_images.get("logo_primary", "")
+    svgs["logo_tipo"]    = fal_images.get("logo_tipo", "")
+    svgs["logo_icon"]    = fal_images.get("logo_icon", "")
     svgs["app1"] = fal_images.get("app1", "")
     svgs["app2"] = fal_images.get("app2", "")
 
