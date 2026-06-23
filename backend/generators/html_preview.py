@@ -231,8 +231,16 @@ def generate_html_preview(brief: dict) -> tuple:
                 "weNot":  voice_we_not,
             },
             "applications": [
-                {"img": svgs.get("app1", ""), "caption": "Sosyal Medya"},
-                {"img": svgs.get("app2", ""), "caption": "İçerik Şablonu"},
+                {
+                    "img":     svgs.get("app1", ""),
+                    "caption": "Sosyal Medya",
+                    "post":    brief.get("social_post_1_caption", ""),
+                },
+                {
+                    "img":     svgs.get("app2", ""),
+                    "caption": "İçerik Şablonu",
+                    "post":    brief.get("social_post_2_caption", ""),
+                },
             ],
             "credit": "Üretildi: BrandGen by Windy Venture Capital",
         }, ensure_ascii=False, indent=2)

@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Brand — {{title}}</title>
+
+<!-- ============================================================= -->
+<!--  No.1 — BRAND KIT TEMPLATE                                     -->
+<!--  Tek dosya. Tamamen MÜŞTERİNİN kimliğine temalanır.           -->
+<!--  Düzenlenecek TEK yer: aşağıdaki brand-config script bloğu.  -->
+<!--  Geri kalan koda DOKUNMA — iskelet + etkileşim sabittir.       -->
+<!-- ============================================================= -->
+
+<!-- ====================  BRAND CONFIG  ====================== -->
+<!-- Sadece burayı doldur. Boş bıraktığın alan/bölüm otomatik gizlenir. -->
+<script id="brand-config">
+window.BRAND = {
+
+  /* ---- KİMLİK ---- */
+  name:    "AETHER",                       // Marka adı (hero'da decode olur)
+  tagline: "Görünmeyeni tasarlarız.",      // Tek cümle konum ifadesi
+  domain:  "aether.co",                    // Footer'da gösterilir (opsiyonel)
+
+  /* ---- RENK (sayfa TAMAMEN buradan temalanır) ---- */
+  colors: {
+    bg:      "#0B0B0D",   // Ana zemin (koyu önerilir; açık marka için açık ver)
+    surface: "#15151A",   // Kart / kutu zemini
+    text:    "#F4F1EA",   // Ana metin
+    muted:   "#8A8A93",   // İkincil / soluk metin
+    accent:  "#C9A25A",   // MARKA ANA VURGU — particle, çizgi, hover, decode
+    accent2: "#6E8BA8"    // İkincil vurgu (opsiyonel; yoksa accent kullanılır)
+  },
+
+  /* ---- RENK BÖLÜMÜ: paletteki tüm renkler (rol etiketli) ---- */
+  palette: [
+    { name: "Onyx",   hex: "#0B0B0D", role: "Zemin" },
+    { name: "Carbon", hex: "#15151A", role: "Yüzey" },
+    { name: "Gold",   hex: "#C9A25A", role: "Ana vurgu" },
+    { name: "Slate",  hex: "#6E8BA8", role: "İkincil" },
+    { name: "Bone",   hex: "#F4F1EA", role: "Metin" }
+  ],
+
+  /* ---- TİPOGRAFİ ---- */
+  type: {
+    // Google Fonts linki (yoksa "" bırak, sistem fontu kullanılır)
+    googleFonts: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap",
+    headingFont: "'Fraunces', Georgia, serif",   // Başlık ailesi
+    bodyFont:    "'Inter', system-ui, sans-serif", // Metin ailesi
+    headingName: "Fraunces",                       // Bölümde gösterilecek isim
+    bodyName:    "Inter",
+    headingNote: "Display / Başlık",
+    bodyNote:    "Metin / Arayüz",
+    sampleWord:  "Aa"                              // Tipografi örneği
+  },
+
+  /* ---- LOGO SİSTEMİ ---- */
+  /* base64 data-URI veya yol. Boş olan varyant gizlenir. */
+  logo: {
+    primary: "",   // Ana logo — Recraft illüstrasyon / görsel ağırlıklı
+    tipo:    "",   // Tipografik wordmark — Recraft metin ağırlıklı
+    icon:    "",   // İkon / amblem — Recraft sembol
+    mono:    "",   // Tek renk — tipo'nun siyah-beyaz sade hali (PIL)
+    inverse: "",   // Ters zemin (opsiyonel)
+    clearSpace: "Logo etrafında, amblem yüksekliğinin yarısı kadar boşluk her yönden korunur.",
+    misuse: [
+      "Germe, sıkıştırma veya oranı bozma",
+      "Onaysız renk değiştirme",
+      "Gölge, kontur veya efekt ekleme",
+      "Düşük kontrastlı / karışık zemine yerleştirme"
+    ]
+  },
+
+  /* ---- HİKAYE / MANİFESTO ---- */
+  story: {
+    eyebrow: "Hikaye",
+    heading: "Sessizliğin içindeki sinyal.",
+    body: [
+      "AETHER, görünmeyen sistemlerin görünen yüzüdür. Karmaşığı sadeye, gürültüyü sinyale çeviririz.",
+      "Her temas noktası bir vaat: az ama net, soğuk değil ama mesafeli, lüks ama gösterişsiz."
+    ]
+  },
+
+  /* ---- KONSEPT ---- */
+  concept: {
+    eyebrow: "Konsept",
+    statement: "Daha az şey, daha çok anlam.",
+    body: "Markanın çekirdek fikri tek cümlede yaşamalı. Bu cümle her kararın turnusol kâğıdıdır."
+  },
+
+  /* ---- SES & TON ---- */
+  voice: {
+    traits: ["Net", "Kendinden emin", "Sıcak ama mesafeli"],
+    we:    [
+      "“Bunu sizin için hallettik.”",
+      "“Kararı kolaylaştırdık, gerisi sizde.”"
+    ],
+    weNot: [
+      "“Sektörün lider çözüm ortağı olarak…”",
+      "“Hemen şimdi kaçırmayın!!!”"
+    ]
+  },
+
+  /* ---- UYGULAMALAR (mockup görselleri) ---- */
+  /* Boş bırakırsan bölüm gizlenir. img: base64 veya yol. */
+  applications: [
+    { img: "", caption: "Sosyal medya" },
+    { img: "", caption: "Kartvizit" },
+    { img: "", caption: "Ambalaj" },
+    { img: "", caption: "Web arayüzü" }
+  ],
+
+  /* ---- İMZA (No.1) ---- */
+  credit: "Kimlik & sayfa: No.1"
+};
+</script>
+<!-- ==================  /BRAND CONFIG  ===================== -->
+
+<style id="base-style">
+  :root{
+    --bg:#0B0B0D; --surface:#15151A; --text:#F4F1EA; --muted:#8A8A93;
+    --accent:#C9A25A; --accent2:#6E8BA8;
+    --hf:'Fraunces',Georgia,serif; --bf:'Inter',system-ui,sans-serif;
+    --maxw:1080px; --ease:cubic-bezier(.16,1,.3,1);
+    --snap:cubic-bezier(.34,1.8,.5,1); /* overshoot — "şlak" yapışma hissi */
+    --line:rgba(255,255,255,.07); /* kenarlık — JS bg parlaklığına göre günceller */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--text);font-family:var(--bf);
+    line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  #particles{position:fixed;inset:0;z-index:0;pointer-events:none}
+  main{position:relative;z-index:1}
+  section{max-width:var(--maxw);margin:0 auto;padding:clamp(80px,12vw,160px) 24px}
+  .eyebrow{
+    font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:20px;font-weight:600;
+  }
+  h1,h2,h3{font-family:var(--hf);font-weight:600;line-height:1.05;letter-spacing:-.01em}
+  h2.sec-title{font-size:clamp(30px,5vw,52px);margin-bottom:32px}
+  p{color:var(--text);max-width:62ch}
+  .muted{color:var(--muted)}
+  .rule{height:1px;background:linear-gradient(90deg,var(--accent),transparent);
+    max-width:var(--maxw);margin:0 auto;opacity:.4}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+    max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  .hero-name{font-family:var(--hf);font-weight:600;
+    font-size:clamp(56px,14vw,170px);line-height:.92;letter-spacing:-.02em}
+  .hero-tag{font-size:clamp(16px,2.4vw,24px);color:var(--muted);
+    margin-top:28px;max-width:30ch}
+  .scroll-cue{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+    font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+  .scroll-cue::after{content:"";display:block;width:1px;height:48px;margin:14px auto 0;
+    background:linear-gradient(var(--accent),transparent)}
+
+  /* REVEAL — cinematic (varsayılan): yavaş yukarı-fade */
+  .reveal{opacity:0;transform:translateY(28px);
+    transition:opacity 1s var(--ease),transform 1s var(--ease)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ============ ENERGY: PLAYFUL (snap / şlak) ============ */
+  /* Eleman mıknatısa yapışır gibi, küçükten overshoot ile çakılır. */
+  body.energy-playful .reveal{
+    opacity:0;transform:translateY(46px) scale(.86) rotate(-1.2deg);
+    transition:opacity .42s var(--snap),transform .42s var(--snap);
+  }
+  body.energy-playful .reveal.in{opacity:1;transform:none}
+  /* Playful tonda her şey biraz daha tok: köşeler, başlık, vurgular */
+  body.energy-playful{letter-spacing:-.01em}
+  body.energy-playful h1,
+  body.energy-playful h2{letter-spacing:-.03em;text-transform:none}
+  body.energy-playful .eyebrow{letter-spacing:.18em}
+  body.energy-playful .trait{font-weight:600}
+  body.energy-playful .logo-cell,
+  body.energy-playful .type-card,
+  body.energy-playful .swatch,
+  body.energy-playful .app{transition:transform .3s var(--snap),border-color .3s var(--ease)}
+  body.energy-playful .logo-cell:hover,
+  body.energy-playful .swatch:hover,
+  body.energy-playful .app:hover{transform:translateY(-3px) scale(1.015)}
+  /* hero adı playful'da çakılma animasyonu */
+  @keyframes snapIn{
+    0%{opacity:0;transform:translateY(-22px) scale(1.18)}
+    70%{opacity:1;transform:translateY(4px) scale(.97)}
+    100%{transform:none}
+  }
+  .snap-anim{animation:snapIn .5s var(--snap) both}
+
+  /* ============ COMIC: playful + light tema (pop-art) ============ */
+  /* Beyaz zeminde kalın siyah kontur + sert offset gölge = çizgi-roman hücre. */
+  body.energy-playful.theme-light .logo-cell,
+  body.energy-playful.theme-light .type-card,
+  body.energy-playful.theme-light .swatch,
+  body.energy-playful.theme-light .app,
+  body.energy-playful.theme-light .voice-col li{
+    border:2.5px solid #111; box-shadow:5px 5px 0 #111; border-radius:14px;
+  }
+  body.energy-playful.theme-light .logo-cell:hover,
+  body.energy-playful.theme-light .swatch:hover,
+  body.energy-playful.theme-light .app:hover{
+    transform:translate(-2px,-2px); box-shadow:8px 8px 0 #111;
+  }
+  body.energy-playful.theme-light .trait{
+    border:2px solid #111; color:#111; box-shadow:3px 3px 0 #111; font-weight:700;
+  }
+  body.energy-playful.theme-light .voice-col.we h3{color:var(--accent)}
+  /* Halftone benek dokusu — sayfa zeminine ince comic dokunuş */
+  body.energy-playful.theme-light::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(rgba(0,0,0,.10) 1.1px, transparent 1.2px);
+    background-size:13px 13px;
+  }
+  body.energy-playful.theme-light .misuse li{
+    border:2.5px solid #E0686B; box-shadow:4px 4px 0 #E0686B; color:#444;
+  }
+
+  /* LOGO GRID */
+  .logo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:8px}
+  .logo-cell{background:var(--surface);border:1px solid var(--line);
+    border-radius:14px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:hidden;transition:border-color .4s var(--ease)}
+  .logo-cell:hover{border-color:var(--accent)}
+  .logo-cell img{max-width:62%;max-height:58%;object-fit:contain}
+  .logo-cell .lbl{position:absolute;bottom:12px;left:14px;font-size:11px;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .logo-cell.inverse{background:var(--text)}
+  .logo-wordmark{font-family:var(--hf);font-size:34px;color:var(--accent)}
+  .misuse{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:12px;margin-top:28px}
+  .misuse li{list-style:none;background:var(--surface);border:1px solid rgba(255,80,80,.18);
+    border-radius:10px;padding:14px 16px;font-size:14px;color:var(--muted);
+    display:flex;gap:10px;align-items:flex-start}
+  .misuse li::before{content:"✕";color:#E0686B;font-weight:700}
+  .clearspace{margin-top:26px;color:var(--muted);font-size:15px;
+    border-left:2px solid var(--accent);padding-left:16px}
+
+  /* COLOR */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+  .swatch{border-radius:14px;overflow:hidden;background:var(--surface);
+    border:1px solid var(--line);cursor:default}
+  .swatch .chip{height:120px;position:relative}
+  .swatch .meta{padding:14px 16px}
+  .swatch .nm{font-weight:600;font-size:15px}
+  .swatch .role{font-size:12px;color:var(--muted);margin-top:2px}
+  .swatch .hex{font-family:ui-monospace,monospace;font-size:13px;color:var(--accent);
+    margin-top:10px;letter-spacing:.05em}
+
+  /* TYPE */
+  .type-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  .type-card{background:var(--surface);border:1px solid var(--line);
+    border-radius:16px;padding:32px}
+  .type-card .big{font-size:84px;line-height:1;margin-bottom:18px}
+  .type-card .nm{font-size:20px;font-weight:600}
+  .type-card .role{font-size:13px;color:var(--muted);margin-top:4px}
+  .type-card .specimen{margin-top:20px;color:var(--muted);font-size:15px}
+
+  /* VOICE */
+  .traits{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:34px}
+  .trait{border:1px solid var(--accent);color:var(--accent);border-radius:100px;
+    padding:8px 18px;font-size:14px;letter-spacing:.02em}
+  .voice-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:640px){.voice-cols{grid-template-columns:1fr}.hero-name{}}
+  .voice-col h3{font-size:14px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px}
+  .voice-col.we h3{color:var(--accent)}
+  .voice-col.wenot h3{color:var(--muted)}
+  .voice-col ul{list-style:none}
+  .voice-col li{padding:14px 16px;border-radius:10px;margin-bottom:10px;font-size:15px;
+    background:var(--surface);border:1px solid var(--line)}
+  .voice-col.wenot li{opacity:.6;text-decoration:line-through;text-decoration-color:rgba(224,104,107,.5)}
+
+  /* APPLICATIONS */
+  .apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  .app{border-radius:16px;overflow:hidden;background:var(--surface);
+    border:1px solid var(--line);transition:transform .5s var(--ease);position:relative}
+  .app:hover{transform:translateY(-4px)}
+  .app .ph{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
+  .app img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+  /* overlay: post text üstüne yerleşir */
+  .app-overlay{
+    position:absolute;left:0;right:0;bottom:0;
+    padding:40px 20px 20px;
+    background:linear-gradient(to top,rgba(0,0,0,.82) 0%,rgba(0,0,0,.45) 55%,transparent 100%);
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .app-post{
+    font-family:var(--hf);font-size:clamp(14px,2vw,17px);font-weight:700;
+    color:#fff;line-height:1.3;letter-spacing:-.01em;
+    /* max 3 satır */
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .app-label{
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+    color:var(--accent);
+  }
+  /* eğer post yoksa eski caption fallback */
+  .app .cap{padding:14px 16px;font-size:13px;letter-spacing:.04em;color:var(--muted)}
+
+  /* FOOTER */
+  footer{max-width:var(--maxw);margin:0 auto;padding:56px 24px 72px;
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    font-size:13px;color:var(--muted);letter-spacing:.04em}
+  footer .sig{color:var(--text)}
+  footer a{color:var(--accent);text-decoration:none}
+
+  @media(prefers-reduced-motion:reduce){
+    .reveal{transition:none;opacity:1;transform:none}
+    html{scroll-behavior:auto}
+  }
+
+  /* ============================================================ */
+  /*  CİNEMATİK GELİŞTİRMELER — sadece energy-cinematic'te aktif  */
+  /* ============================================================ */
+
+  /* Film grain canvas */
+  #grain{
+    position:fixed;inset:0;z-index:2;pointer-events:none;
+    opacity:0;mix-blend-mode:screen;
+    /* Küçük tile stretched — autantik grain dokusu */
+    image-rendering:pixelated;width:100%;height:100%;
+  }
+  body.energy-cinematic #grain{opacity:.045}
+
+  /* Hero: sinematik zemin harfi */
+  .hero{position:relative;overflow:hidden}
+  .hero-ghost{
+    position:absolute;left:-3%;top:50%;transform:translateY(-52%);
+    font-family:var(--hf);font-weight:700;
+    font-size:clamp(240px,34vw,480px);
+    line-height:1;letter-spacing:-.04em;
+    color:var(--accent);opacity:.055;
+    pointer-events:none;user-select:none;
+    will-change:transform;z-index:0;
+  }
+  body.energy-playful .hero-ghost{display:none}
+  /* Hero içerik grain'in üstünde kalsın */
+  .hero-name,.hero-tag,.scroll-cue{position:relative;z-index:1}
+
+  /* Hero: yatay tarama çizgisi (sinema scanliner) */
+  @keyframes scanmove{
+    0%{opacity:0;top:0%}8%{opacity:1}92%{opacity:1}100%{opacity:0;top:100%}
+  }
+  .hero-scan{
+    position:absolute;left:0;right:0;height:1px;top:0;
+    background:linear-gradient(90deg,transparent 0%,var(--accent) 50%,transparent 100%);
+    opacity:0;pointer-events:none;z-index:3;
+  }
+  body.energy-cinematic .hero-scan{animation:scanmove 14s ease-in-out infinite;animation-delay:2s}
+  body.energy-playful .hero-scan{display:none}
+
+  /* Concept bölümü: sinematik büyük statement */
+  .concept-big{
+    font-family:var(--hf);
+    font-size:clamp(28px,5.5vw,72px);
+    line-height:1.06;letter-spacing:-.02em;
+    max-width:18ch;
+    border-left:3px solid var(--accent);
+    padding-left:clamp(18px,2.5vw,36px);
+    margin-top:8px;
+    font-weight:600;
+  }
+  body.energy-playful .concept-big{
+    /* playful'da normal sec-title boyutuna dön */
+    font-size:clamp(30px,5vw,52px);
+    border-left:none;padding-left:0;
+  }
+
+  /* Uygulama kartları: sinematik derinlik */
+  body.energy-cinematic .app{
+    box-shadow:0 6px 28px rgba(0,0,0,.45);
+  }
+  body.energy-cinematic .app:hover{
+    transform:translateY(-6px) scale(1.01);
+    box-shadow:0 20px 56px rgba(0,0,0,.55);
+  }
+  /* Logo hücreleri: sinematik hover */
+  body.energy-cinematic .logo-cell:hover{
+    box-shadow:0 8px 32px rgba(0,0,0,.35);
+    border-color:var(--accent);
+  }
+
+  /* Geometric accent line — bölümler arası cinematic ruler */
+  .geo-rule{
+    max-width:var(--maxw);margin:0 auto;padding:0 24px;
+    display:flex;align-items:center;gap:16px;
+    opacity:0;transition:opacity 1.2s var(--ease);
+  }
+  .geo-rule.in{opacity:1}
+  body.energy-playful .geo-rule{display:none}
+  .geo-rule::before{content:"";flex:1;height:1px;
+    background:linear-gradient(90deg,var(--accent),transparent);opacity:.35}
+  .geo-rule .geo-label{
+    font-size:10px;letter-spacing:.35em;text-transform:uppercase;
+    color:var(--accent);opacity:.5;white-space:nowrap;
+  }
+  .geo-rule::after{content:"";width:4px;height:4px;border-radius:50%;
+    background:var(--accent);opacity:.4;flex-shrink:0}
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+<!-- Cinematic: film grain overlay — sadece energy-cinematic'te aktif -->
+<canvas id="grain"></canvas>
+<main id="app"><!-- JS doldurur --></main>
+
+<script id="render-engine">
+(function(){
+  "use strict";
+  var B = window.BRAND || {};
+  var C = B.colors || {};
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Marka enerjisi: "cinematic" (varsayılan) | "playful"
+  var ENERGY = (B.energy === "playful") ? "playful" : "cinematic";
+  var PLAYFUL = ENERGY === "playful";
+
+  // Zemin parlaklığına göre tema: light/dark → kenarlık rengini ayarla
+  function lum(hex){
+    if(!hex) return 0;
+    hex=hex.replace("#",""); if(hex.length===3) hex=hex.split("").map(function(c){return c+c;}).join("");
+    var n=parseInt(hex,16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+    return (0.299*r+0.587*g+0.114*b)/255;
+  }
+  var LIGHT = lum(C.bg||"#0B0B0D") > 0.6;
+  document.body.className = "energy-" + ENERGY + " theme-" + (LIGHT ? "light" : "dark");
+  document.documentElement.style.setProperty("--line", LIGHT ? "rgba(0,0,0,.14)" : "rgba(255,255,255,.07)");
+
+  /* ---------- 0. Tema değişkenlerini uygula ---------- */
+  var r = document.documentElement.style;
+  if(C.bg)      r.setProperty("--bg", C.bg);
+  if(C.surface) r.setProperty("--surface", C.surface);
+  if(C.text)    r.setProperty("--text", C.text);
+  if(C.muted)   r.setProperty("--muted", C.muted);
+  if(C.accent)  r.setProperty("--accent", C.accent);
+  r.setProperty("--accent2", C.accent2 || C.accent || "#888");
+  if(B.type && B.type.headingFont) r.setProperty("--hf", B.type.headingFont);
+  if(B.type && B.type.bodyFont)    r.setProperty("--bf", B.type.bodyFont);
+  document.title = "Brand — " + (B.name || "");
+
+  // Google Fonts
+  if(B.type && B.type.googleFonts){
+    var lk = document.createElement("link");
+    lk.rel="stylesheet"; lk.href=B.type.googleFonts;
+    document.head.appendChild(lk);
+  }
+
+  /* ---------- yardımcılar ---------- */
+  function el(tag, cls, html){
+    var e=document.createElement(tag);
+    if(cls) e.className=cls;
+    if(html!=null) e.innerHTML=html;
+    return e;
+  }
+  function esc(s){return String(s==null?"":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function has(v){ return v!=null && String(v).trim()!==""; }
+  function hasArr(a){ return Array.isArray(a) && a.length>0; }
+
+  var app = document.getElementById("app");
+
+  /* ---------- 1. HERO ---------- */
+  (function(){
+    var sec = el("header","hero reveal");
+    // Sinematik: zemin harfi (marka adının ilk karakteri, büyük faded)
+    if(!PLAYFUL && has(B.name)){
+      var ghost = el("div","hero-ghost");
+      ghost.textContent = (B.name||"A")[0].toUpperCase();
+      sec.appendChild(ghost);
+      // Scan line animasyonu
+      sec.appendChild(el("div","hero-scan"));
+    }
+    var name = el("h1","hero-name");
+    name.setAttribute("data-decode", B.name||"");
+    name.textContent = B.name||"";
+    sec.appendChild(name);
+    if(has(B.tagline)) sec.appendChild(el("p","hero-tag", esc(B.tagline)));
+    sec.appendChild(el("div","scroll-cue","Kaydır"));
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 2. HİKAYE ---------- */
+  (function(){
+    var s=B.story; if(!s || (!has(s.heading) && !hasArr(s.body))) return;
+    var sec=el("section","reveal");
+    if(has(s.eyebrow)) sec.appendChild(el("div","eyebrow",esc(s.eyebrow)));
+    if(has(s.heading)) sec.appendChild(el("h2","sec-title",esc(s.heading)));
+    (s.body||[]).forEach(function(p){
+      if(has(p)) sec.appendChild(el("p","",esc(p)+"<br><br>"));
+    });
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 3. KONSEPT ---------- */
+  (function(){
+    var c=B.concept; if(!c || (!has(c.statement) && !has(c.body))) return;
+    // Cinematic: bölüm öncesi geometric accent ruler
+    if(!PLAYFUL){
+      var ruler=el("div","geo-rule reveal");
+      ruler.appendChild(el("span","geo-label","Konsept"));
+      app.appendChild(ruler);
+    }
+    var sec=el("section","reveal");
+    if(has(c.eyebrow)) sec.appendChild(el("div","eyebrow",esc(c.eyebrow)));
+    if(has(c.statement)){
+      // Cinematic: büyük sol-bordered statement; playful: normal sec-title
+      var h=el("h2","concept-big");
+      h.setAttribute("data-decode",c.statement);
+      h.innerHTML=esc(c.statement);
+      sec.appendChild(h);
+    }
+    if(has(c.body)) sec.appendChild(el("p","muted",esc(c.body)));
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 4. LOGO SİSTEMİ ---------- */
+  (function(){
+    var L=B.logo; if(!L) return;
+    var variants=[
+      {k:"primary",lbl:"Ana"},{k:"tipo",lbl:"Tipo"},
+      {k:"icon",lbl:"İkon"},{k:"mono",lbl:"Mono"}
+    ];
+    var any = variants.some(function(v){return has(L[v.k]);});
+    var sec=el("section","reveal");
+    sec.appendChild(el("div","eyebrow","Logo Sistemi"));
+    sec.appendChild(el("h2","sec-title","İşaret"));
+    var grid=el("div","logo-grid");
+    if(any){
+      variants.forEach(function(v){
+        if(!has(L[v.k])) return;
+        var cell=el("div","logo-cell"+(v.k==="inverse"?" inverse":""));
+        var img=el("img"); img.src=L[v.k]; img.alt=v.lbl+" logo";
+        cell.appendChild(img);
+        cell.appendChild(el("span","lbl",v.lbl));
+        grid.appendChild(cell);
+      });
+    } else {
+      // logo verilmemiş → marka adını tipografik wordmark olarak göster
+      var cell=el("div","logo-cell");
+      cell.appendChild(el("div","logo-wordmark",esc(B.name||"")));
+      cell.appendChild(el("span","lbl","Wordmark"));
+      grid.appendChild(cell);
+    }
+    sec.appendChild(grid);
+    if(has(L.clearSpace)) sec.appendChild(el("div","clearspace",esc(L.clearSpace)));
+    if(hasArr(L.misuse)){
+      var ul=el("ul","misuse");
+      L.misuse.forEach(function(m){ if(has(m)) ul.appendChild(el("li","",esc(m))); });
+      sec.appendChild(ul);
+    }
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 5. RENK ---------- */
+  (function(){
+    var P=B.palette; if(!hasArr(P)) return;
+    var sec=el("section","reveal");
+    sec.appendChild(el("div","eyebrow","Renk"));
+    sec.appendChild(el("h2","sec-title","Palet"));
+    var grid=el("div","swatches");
+    P.forEach(function(c){
+      if(!has(c.hex)) return;
+      var sw=el("div","swatch");
+      var chip=el("div","chip"); chip.style.background=c.hex;
+      sw.appendChild(chip);
+      var meta=el("div","meta");
+      meta.appendChild(el("div","nm",esc(c.name||"")));
+      if(has(c.role)) meta.appendChild(el("div","role",esc(c.role)));
+      var hex=el("div","hex"); hex.setAttribute("data-decode",c.hex);
+      hex.textContent=c.hex; meta.appendChild(hex);
+      sw.appendChild(meta); grid.appendChild(sw);
+    });
+    sec.appendChild(grid);
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 6. TİPOGRAFİ ---------- */
+  (function(){
+    var T=B.type; if(!T || (!has(T.headingName) && !has(T.bodyName))) return;
+    var sec=el("section","reveal");
+    sec.appendChild(el("div","eyebrow","Tipografi"));
+    sec.appendChild(el("h2","sec-title","Yazı Sistemi"));
+    var wrap=el("div","type-wrap");
+    function card(font,name,note){
+      if(!has(name)) return null;
+      var c=el("div","type-card");
+      var big=el("div","big",esc(T.sampleWord||"Aa"));
+      big.style.fontFamily=font; c.appendChild(big);
+      c.appendChild(el("div","nm",esc(name)));
+      if(has(note)) c.appendChild(el("div","role",esc(note)));
+      var spec=el("div","specimen","AaBbCc 0123 — “{kısa örnek}”".replace("{kısa örnek}", B.tagline||"hızlı kahverengi tilki"));
+      spec.style.fontFamily=font; c.appendChild(spec);
+      return c;
+    }
+    var c1=card(T.headingFont,T.headingName,T.headingNote||"Başlık");
+    var c2=card(T.bodyFont,T.bodyName,T.bodyNote||"Metin");
+    if(c1)wrap.appendChild(c1); if(c2)wrap.appendChild(c2);
+    sec.appendChild(wrap);
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 7. SES & TON ---------- */
+  (function(){
+    var V=B.voice; if(!V || (!hasArr(V.we) && !hasArr(V.weNot) && !hasArr(V.traits))) return;
+    var sec=el("section","reveal");
+    sec.appendChild(el("div","eyebrow","Ses & Ton"));
+    sec.appendChild(el("h2","sec-title","Nasıl Konuşuruz"));
+    if(hasArr(V.traits)){
+      var tr=el("div","traits");
+      V.traits.forEach(function(t){ if(has(t)) tr.appendChild(el("span","trait",esc(t))); });
+      sec.appendChild(tr);
+    }
+    if(hasArr(V.we) || hasArr(V.weNot)){
+      var cols=el("div","voice-cols");
+      if(hasArr(V.we)){
+        var w=el("div","voice-col we"); w.appendChild(el("h3","","Böyle deriz"));
+        var ul=el("ul"); V.we.forEach(function(x){ if(has(x)) ul.appendChild(el("li","",esc(x))); });
+        w.appendChild(ul); cols.appendChild(w);
+      }
+      if(hasArr(V.weNot)){
+        var n=el("div","voice-col wenot"); n.appendChild(el("h3","","Böyle demeyiz"));
+        var ul2=el("ul"); V.weNot.forEach(function(x){ if(has(x)) ul2.appendChild(el("li","",esc(x))); });
+        n.appendChild(ul2); cols.appendChild(n);
+      }
+      sec.appendChild(cols);
+    }
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 8. UYGULAMALAR ---------- */
+  (function(){
+    var A=B.applications; if(!hasArr(A)) return;
+    var withImg = A.filter(function(a){return a && has(a.img);});
+    if(withImg.length===0) return; // görselsizse bölümü hiç gösterme
+    var sec=el("section","reveal");
+    sec.appendChild(el("div","eyebrow","Uygulamalar"));
+    sec.appendChild(el("h2","sec-title","Yaşayan Kimlik"));
+    var grid=el("div","apps");
+    withImg.forEach(function(a){
+      var card=el("div","app");
+      var img=el("img"); img.src=a.img; img.alt=a.caption||""; img.loading="lazy";
+      card.appendChild(img);
+      // post varsa overlay, yoksa eski cap fallback
+      if(has(a.post)){
+        var ov=el("div","app-overlay");
+        ov.appendChild(el("p","app-post",esc(a.post)));
+        if(has(a.caption)) ov.appendChild(el("div","app-label",esc(a.caption)));
+        card.appendChild(ov);
+      } else if(has(a.caption)){
+        card.appendChild(el("div","cap",esc(a.caption)));
+      }
+      grid.appendChild(card);
+    });
+    sec.appendChild(grid);
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 9. FOOTER ---------- */
+  (function(){
+    app.appendChild(el("div","rule"));
+    var f=el("footer");
+    var left=el("div");
+    left.innerHTML = "<strong>"+esc(B.name||"")+"</strong>"+
+      (has(B.domain)?(" &nbsp;·&nbsp; <a href='#'>"+esc(B.domain)+"</a>"):"");
+    var right=el("div","sig", esc(B.credit||"Kimlik & sayfa: No.1"));
+    f.appendChild(left); f.appendChild(right);
+    app.appendChild(f);
+  })();
+
+  /* ---------- REVEAL gözlemcisi ---------- */
+  if(reduce){
+    [].forEach.call(document.querySelectorAll(".reveal"),function(e){e.classList.add("in");});
+  } else {
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target);} });
+    },{threshold:.14});
+    [].forEach.call(document.querySelectorAll(".reveal"),function(e){io.observe(e);});
+  }
+
+  /* ---------- İMZA EFEKTİ (enerjiye göre) ----------
+     cinematic → decode/nişangâh (karakter karakter çözülür)
+     playful   → snap/şlak (eleman çakılarak yerine oturur)         */
+  var GLYPHS="ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#@%&";
+  function decode(node){
+    var final=node.getAttribute("data-decode")||node.textContent;
+    if(reduce){ node.textContent=final; return; }
+    var frame=0, dur=Math.min(38, 14+final.length);
+    var iv=setInterval(function(){
+      var out="";
+      for(var i=0;i<final.length;i++){
+        if(i < frame*(final.length/dur)) out+=final[i];
+        else if(final[i]===" ") out+=" ";
+        else out+=GLYPHS[Math.floor(Math.random()*GLYPHS.length)];
+      }
+      node.textContent=out; frame++;
+      if(frame>dur){ node.textContent=final; clearInterval(iv); }
+    },28);
+  }
+  function snapIn(node){
+    var final=node.getAttribute("data-decode")||node.textContent;
+    node.textContent=final;
+    if(reduce) return;
+    node.classList.remove("snap-anim"); void node.offsetWidth; // reflow
+    node.classList.add("snap-anim");
+  }
+  var sign = PLAYFUL ? snapIn : decode;
+  if(reduce){
+    [].forEach.call(document.querySelectorAll("[data-decode]"),function(n){
+      n.textContent=n.getAttribute("data-decode")||n.textContent;
+    });
+  } else {
+    var dio=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ sign(e.target); dio.unobserve(e.target);} });
+    },{threshold:.5});
+    [].forEach.call(document.querySelectorAll("[data-decode]"),function(n){dio.observe(n);});
+  }
+
+  /* ---------- PARTICLE FIELD (marka renginde) ---------- */
+  (function(){
+    var cv=document.getElementById("particles"); if(!cv) return;
+    var ctx=cv.getContext("2d");
+    var accent = (C.accent||"#C9A25A");
+    function hexToRgb(h){
+      h=h.replace("#",""); if(h.length===3) h=h.split("").map(function(c){return c+c;}).join("");
+      var n=parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255];
+    }
+    var rgb=hexToRgb(accent);
+    var w,h,parts,raf;
+    var mouse={x:-9999,y:-9999};
+    function size(){ w=cv.width=innerWidth; h=cv.height=innerHeight; }
+    function init(){
+      // playful biraz daha kalabalık & canlı
+      var dens = PLAYFUL ? 14 : 20;
+      var n=Math.min(PLAYFUL?100:70, Math.floor(innerWidth/dens));
+      parts=Array.from({length:n},function(){return{
+        x:Math.random()*w,y:Math.random()*h,
+        vx:(PLAYFUL?.2:.12)+Math.random()*(PLAYFUL?.5:.35),
+        vy:(Math.random()-.5)*(PLAYFUL?.3:.14),
+        r:Math.random()*(PLAYFUL?1.8:1.4)+.3,a:Math.random()*.45+.08
+      };});
+    }
+    function draw(){
+      ctx.clearRect(0,0,w,h);
+      for(var i=0;i<parts.length;i++){
+        var p=parts[i];
+        if(PLAYFUL){
+          // MANYETİK: demir tozu imlece çekilir ("şlak" mantığı)
+          var dx=mouse.x-p.x, dy=mouse.y-p.y, d2=dx*dx+dy*dy;
+          if(d2<40000){ var f=12/(d2+400); p.vx+=dx*f; p.vy+=dy*f; }
+          p.vx*=.94; p.vy*=.94;
+          p.vx+=.05; // hafif sağa akış sürsün
+        }
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.x>w+5){p.x=-5;p.y=Math.random()*h;}
+        if(p.x<-10){p.x=w+5;}
+        if(p.y<-5||p.y>h+5)p.y=Math.random()*h;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle="rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+p.a+")"; ctx.fill();
+      }
+      raf=requestAnimationFrame(draw);
+    }
+    size(); init();
+    if(reduce){ draw(); cancelAnimationFrame(raf); } else { draw(); }
+    addEventListener("resize",function(){ size(); init(); });
+    if(PLAYFUL && !reduce){
+      addEventListener("mousemove",function(e){ mouse.x=e.clientX; mouse.y=e.clientY; });
+      addEventListener("mouseout",function(){ mouse.x=-9999; mouse.y=-9999; });
+    }
+  })();
+
+  /* ---------- FİLM GRAIN (sadece cinematic) ----------
+     256×256 tile, 15fps — düşük CPU, autantik sinema dokusu.   */
+  if(!PLAYFUL && !reduce){
+    (function(){
+      var gc=document.getElementById("grain"); if(!gc) return;
+      var gctx=gc.getContext("2d");
+      // Küçük tile — CSS width:100% ile gerili
+      gc.width=256; gc.height=256;
+      var tick=0;
+      (function loop(){
+        tick++;
+        // Her 4. frame'de çiz → ~15fps (60fps rAF'ta)
+        if(tick%4===0){
+          var id=gctx.createImageData(256,256);
+          var d=id.data;
+          for(var i=0;i<d.length;i+=4){
+            var v=(Math.random()*255)|0;
+            d[i]=d[i+1]=d[i+2]=v;
+            // Çok düşük alpha — subtil grain
+            d[i+3]=(Math.random()*22)|0;
+          }
+          gctx.putImageData(id,0,0);
+        }
+        requestAnimationFrame(loop);
+      })();
+    })();
+  }
+
+})();
+</script>
+</body>
+</html>
