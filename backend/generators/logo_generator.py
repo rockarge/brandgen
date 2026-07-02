@@ -710,6 +710,36 @@ def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
 
 
 # ── ANA LOGO ─────────────────────────────────────────────────────────────────
+# NOT (3 Tem 2026 hotfix): Bu iki dict, ölü SVG kodu temizliği sırasında (2 Tem)
+# yanlışlıkla legacy_svg_generator.py'ye taşınmıştı — ama select_logo_primary_png
+# (aşağıda, CANLI fonksiyon) bunlara bağımlıydı. Üretimde "_STUDIO_TEMPLATE_MAP is
+# not defined" hatasına yol açtı, buraya geri taşındı. Ders: dead-code temizliğinde
+# fonksiyon çağrılarını grep'lemek yetmiyor, module-level sabitleri de ayrı kontrol
+# etmek gerekiyor — statik syntax kontrolü (py_compile) bu tür hatayı yakalamaz,
+# sadece çalışma zamanında patlar.
+_STUDIO_TEMPLATE_MAP = {
+    "Collins":          "A",
+    "Bureau Borsche":   "D",
+    "Sagmeister&Walsh": "C",
+    "Pentagram":        "B",
+    "Landor":           "B",
+    "Wolff Olins":      "B",
+    "Base Design":      "E",
+}
+
+_ENERGY_TEMPLATE_MAP = {
+    "bold":      "A",
+    "urgent":    "A",
+    "energetic": "A",
+    "dynamic":   "D",
+    "playful":   "E",
+    "cinematic": "B",
+    "premium":   "B",
+    "luxury":    "B",
+    "editorial": "E",
+    "corporate": "B",
+}
+
 
 def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dict | None = None) -> str:
     """
