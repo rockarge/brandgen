@@ -88,7 +88,9 @@ def generate_html_preview(brief: dict) -> tuple:
     studio_label = brief.get("studio_dna", {}).get("label", "")
     svgs = {
         "logo_primary": select_logo_primary_png(brief, studio_label=studio_label),
-        "logo_mono":    select_logo_mono_png(brief),
+        # studio_label buraya da geçiyor (3 Tem 2026) — ANA ve MONO/TİPO aynı
+        # markaya özgü fontu (tpl_X.ttf) kullansın, ikisi ayrı fonta düşmesin.
+        "logo_mono":    select_logo_mono_png(brief, studio_label=studio_label),
     }
     # logo_tipo: ayrı bir diffusion çağrısı yerine mono'nun (şeffaf, tek renk) tekrar
     # kullanımı — B4'teki "diffusion'dan exact-text custom lettering iste" görevi

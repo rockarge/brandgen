@@ -195,7 +195,11 @@ def finalize_job(job_id: str) -> None:
 
         # Dosyaları yeniden üret (watermarksız) — preview'da gösterilenle AYNI kaynak
         logo_primary_uri = select_logo_primary_png(brief, studio_label=studio_label)
-        logo_mono_uri     = select_logo_mono_png(brief)
+        # studio_label buraya da geçiyor (3 Tem 2026, font-per-marka) — finalize_job'ın
+        # ürettiği ZIP, preview'daki ile AYNI fontu kullansın (aksi hâlde tam da bu
+        # dosyanın başında düzeltilen "Preview ≠ İndirilen" sınıfı bir bug'ı, bu sefer
+        # font üzerinden, sessizce geri getirirdik).
+        logo_mono_uri     = select_logo_mono_png(brief, studio_label=studio_label)
         fal_images        = generate_all_images(brief)
 
         logo_primary  = _datauri_to_pil_rgb(logo_primary_uri, bg_hex, size=(1600, 560))

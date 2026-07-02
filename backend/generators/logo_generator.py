@@ -15,7 +15,6 @@ import html as html_esc
 import io as _io
 import os
 import math
-import urllib.request as _urlreq
 from pathlib import Path as _Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -321,34 +320,19 @@ def _is_dark_hex(hex_color: str) -> bool:
 _PIL_FONTS_DIR = _Path(__file__).parent.parent / "assets" / "fonts"
 _PIL_FONT_CACHE: dict = {}
 
-_PIL_FONT_URLS = {
-    "display": "https://cdn.jsdelivr.net/gh/dharmatype/Bebas-Neue@master/Fonts/BN/BebasNeue-Regular.ttf",
-    "body":    "https://cdn.jsdelivr.net/gh/floriankarsten/space-grotesk@master/fonts/ttf/SpaceGrotesk-Bold.ttf",
-}
-
-
-def _pil_dl_fonts() -> None:
-    """Font dosyalarını bir kez indir, önbelleğe al."""
-    _PIL_FONTS_DIR.mkdir(parents=True, exist_ok=True)
-    for name, url in _PIL_FONT_URLS.items():
-        dest = _PIL_FONTS_DIR / f"{name}.ttf"
-        if dest.exists() and dest.stat().st_size > 8_000:
-            continue
-        try:
-            req = _urlreq.Request(url, headers={"User-Agent": "BrandGen/2.0"})
-            with _urlreq.urlopen(req, timeout=20) as r:
-                data = r.read()
-            if len(data) > 8_000:
-                dest.write_bytes(data)
-                print(f"[logo] Font indirildi: {name}")
-        except Exception as e:
-            print(f"[logo] Font indirilemedi ({name}): {e}")
-
-
-try:
-    _pil_dl_fonts()
-except Exception:
-    pass
+# NOT (3 Tem 2026 hotfix #2 — GERİ ALINDI, bkz. calisma-kurallari.md kural 8):
+# Burada önce eski kırık CDN URL'lerini (404 veriyordu, bkz. B14) çalışan bir
+# google/fonts linkiyle "düzeltmiştim". Serhat bunu durdurdu: (1) Bebas Neue yeni
+# işlerde zaten terk edildi — burada "düzeltip" geri getirmek yanlış yön, (2) sunucu
+# runtime'da kendi kendine internetten dosya indirmesi — onay almadan hiçbir yerden
+# dosya indirilmeyecek kuralına giriyor, sunucu tarafı otomatik indirme de dahil.
+# Otomatik CDN indirme mekanizması bu yüzden TAMAMEN KALDIRILDI.
+#
+# Şu an: assets/fonts/ klasörüne Serhat kendi koyduğu .ttf dosyaları varsa onlar
+# kullanılır (aşağıdaki _pil_font() zaten önce oraya bakıyor); yoksa SYSTEM_FONTS
+# fallback'e düşer (DejaVu/Liberation). Yeni display/body fontu kararı Serhat'tan
+# gelmeden burada font ismi/URL varsayımı yapılmayacak.
+_PIL_FONT_URLS: dict = {}
 
 
 def _pil_font(name: str = "display", size: int = 80) -> ImageFont.FreeTypeFont:
@@ -359,6 +343,14 @@ def _pil_font(name: str = "display", size: int = 80) -> ImageFont.FreeTypeFont:
     if path.exists():
         try:
             f = ImageFont.truetype(str(path), size)
+            if name == "body":
+                # Eğer buraya konan body.ttf variable font ise (örn. Space Grotesk),
+                # bold ekseni açıkça set edilmezse Regular (400) ağırlıkta çıkar.
+                # Statik bir Bold .ttf konursa bu satır no-op kalır (except'e düşer).
+                try:
+                    f.set_variation_by_axes([700])
+                except Exception:
+                    pass
             _PIL_FONT_CACHE[key] = f
             return f
         except Exception:
@@ -534,7 +526,7 @@ _ENERGY_MARK_MAP = {
 # Geometrik markların yerini alan, marka adının ilk harfini kullanan ikonlar.
 # Her birinin stüdyo DNA'sı var — "swap testi"ni geçen formlar.
 
-def _pil_icon_negative(first: str, pc: str, bg: str, ac: str, S: int = 640) -> Image.Image:
+def _pil_icon_negative(first: str, pc: str, bg: str, ac: str, S: int = 640, tpl: str = "A") -> Image.Image:
     """
     I-A: Primary renk blok, harf bg rengiyle oyulmuş.
     Collins / Landor / Base Design / minimal.
@@ -545,7 +537,7 @@ def _pil_icon_negative(first: str, pc: str, bg: str, ac: str, S: int = 640) -> I
     m = int(S * 0.06)
     d.rectangle([m, m, S - m, S - m], fill=_pil_rgb(pc))
     fs = int(S * 0.74)
-    f = _pil_font("display", fs)
+    f = _pil_font(f"tpl_{tpl}", fs)
     bb = d.textbbox((0, 0), first, font=f)
     tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
     ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.03)
@@ -556,7 +548,7 @@ def _pil_icon_negative(first: str, pc: str, bg: str, ac: str, S: int = 640) -> I
     return img
 
 
-def _pil_icon_diagonal(first: str, pc: str, bg: str, ac: str, S: int = 640) -> Image.Image:
+def _pil_icon_diagonal(first: str, pc: str, bg: str, ac: str, S: int = 640, tpl: str = "A") -> Image.Image:
     """
     I-B: Harf primary renk, üzerinden diagonal şerit kesiyor.
     Bureau Borsche / bold / energetic.
@@ -565,7 +557,7 @@ def _pil_icon_diagonal(first: str, pc: str, bg: str, ac: str, S: int = 640) -> I
     img = Image.new("RGB", (S, S), _pil_rgb(bg))
     d = ImageDraw.Draw(img)
     fs = int(S * 0.82)
-    f = _pil_font("display", fs)
+    f = _pil_font(f"tpl_{tpl}", fs)
     bb = d.textbbox((0, 0), first, font=f)
     tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
     ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
@@ -587,7 +579,7 @@ def _pil_icon_diagonal(first: str, pc: str, bg: str, ac: str, S: int = 640) -> I
     return img
 
 
-def _pil_icon_split(first: str, pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
+def _pil_icon_split(first: str, pc: str, ac: str, bg: str, S: int = 640, tpl: str = "A") -> Image.Image:
     """
     I-C: Harf dikey ikiye bölünmüş, iki farklı renk.
     Sagmeister & Walsh / playful / dynamic.
@@ -599,7 +591,7 @@ def _pil_icon_split(first: str, pc: str, ac: str, bg: str, S: int = 640) -> Imag
     dl = ImageDraw.Draw(left)
     dr = ImageDraw.Draw(right)
     fs = int(S * 0.82)
-    f = _pil_font("display", fs)
+    f = _pil_font(f"tpl_{tpl}", fs)
     bb = dl.textbbox((0, 0), first, font=f)
     tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
     ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
@@ -615,7 +607,7 @@ def _pil_icon_split(first: str, pc: str, ac: str, bg: str, S: int = 640) -> Imag
     return base
 
 
-def _pil_icon_frame(first: str, pc: str, bg: str, ac: str, S: int = 640) -> Image.Image:
+def _pil_icon_frame(first: str, pc: str, bg: str, ac: str, S: int = 640, tpl: str = "A") -> Image.Image:
     """
     I-D: Harf primary renk, üst/alt accent şeritleri.
     Pentagram / Wolff Olins / corporate / sistematik.
@@ -624,7 +616,7 @@ def _pil_icon_frame(first: str, pc: str, bg: str, ac: str, S: int = 640) -> Imag
     img = Image.new("RGB", (S, S), _pil_rgb(bg))
     d = ImageDraw.Draw(img)
     fs = int(S * 0.82)
-    f = _pil_font("display", fs)
+    f = _pil_font(f"tpl_{tpl}", fs)
     bb = d.textbbox((0, 0), first, font=f)
     tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
     ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
@@ -692,21 +684,36 @@ def _parse_icon_concept(concept: str) -> str:
 
 def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
                    x: int, avail_w: int, area_top: int, area_h: int,
-                   color: str) -> None:
+                   color: str, tpl: str = "A") -> None:
     """
-    Bebas Neue ile brand adı + Space Grotesk ile tagline çizer.
+    tpl'e göre seçilmiş kürasyonlu marka fontuyla (tpl_A..E.ttf) brand adı,
+    Manrope (body.ttf) ile tagline çizer — 3 Tem 2026: artık her marka kendi
+    template'ine (A-E) bağlı kürasyonlu bir display fontu kullanıyor, sabit tek
+    font değil (bkz. _resolve_template).
     area_top + area_h alanının içine dikey olarak ortalar.
     """
     fs = _bebas_size(len(name), avail_w)
-    f = _pil_font("display", fs)
+    f = _pil_font(f"tpl_{tpl}", fs)
     bb = d.textbbox((0, 0), name, font=f)
     nh = bb[3] - bb[1]
-    name_y = area_top + (area_h - nh) // 2 - int(area_h * 0.05)
+    # NOT (3 Tem 2026 hotfix #3 — GERÇEK KÖK NEDEN): "name_y" PIL'in text-çizme
+    # ORİJİNİ (anchor "la" — ascender hattı), ink'in görsel üst kenarı DEĞİL. Eski
+    # kod bunu aynı şey sanıp `name_y + nh` ile tagline'ı konumlandırıyordu — Bebas
+    # Neue'de bb[1] (üst boşluk) ~0 olduğu için tesadüfen doğru gibi duruyordu.
+    # Bodoni Moda gibi bb[1]=81px olan bir fontta bu hata accent çubuğunu/tagline'ı
+    # doğrudan HARFLERİN ORTASINA düşürdü (font-per-marka testinde yakalandı).
+    # Doğrusu: ink_top hedefi hesapla, ORIGIN'i ink_top - bb[1] olarak geriye çöz.
+    ink_top = area_top + (area_h - nh) // 2 - int(area_h * 0.05)
+    name_y = ink_top - bb[1]
     d.text((x, name_y), name, font=f, fill=_pil_rgb(color))
     if tag:
         ts = max(22, fs // 5)
         tf = _pil_font("body", ts)
-        d.text((x, name_y + nh + 18), tag.upper()[:42], font=tf, fill=_pil_rgb(color))
+        # Boşluk fs ile orantılı (büyük fontlarda sabit px yetmiyordu) — 0.16'dan
+        # 0.20'ye çıkarıldı, farklı fontların descender/line-gap farklarına pay bırakır.
+        gap = max(20, int(fs * 0.20))
+        ink_bottom = ink_top + nh
+        d.text((x, ink_bottom + gap), tag.upper()[:42], font=tf, fill=_pil_rgb(color))
 
 
 # ── ANA LOGO ─────────────────────────────────────────────────────────────────
@@ -740,6 +747,37 @@ _ENERGY_TEMPLATE_MAP = {
     "corporate": "B",
 }
 
+_ENERGY_TIER_TEMPLATE = {
+    "bold":      "A",  # color block — cesur, dolu
+    "luxury":    "B",  # dark statement — ağır, premium
+    "cinematic": "B",  # dark statement — dramatik zemin
+    "playful":   "E",  # offset block — hafif, asimetrik
+    "minimal":   "B",  # dark statement — sessiz güç
+}
+
+
+def _resolve_template(brief: dict, studio_label: str = "") -> str:
+    """
+    ANA logo, MONO/TİPO ve İKON'un font+şekil kişiliğini paylaşması için TEK
+    şablon karar mekanizması (3 Tem 2026 font-per-marka eklenirken çıkarıldı).
+    Önceden bu mantık sadece select_logo_primary_png içinde vardı — mono/icon
+    hiç template hesaplamıyordu, bu yüzden hep aynı sabit fontu kullanıyorlardı.
+    Öncelik: stüdyo eşlemesi → energy_tier map → legacy energy keyword → default A.
+    (pil_params override'ı burada YOK — o sadece select_logo_primary_png'ye özel,
+    tasarım direktörünün elle seçtiği bir override, mono/icon'a sızmıyor.)
+    """
+    energy = str(brief.get("energy_tier", brief.get("energy", "cinematic"))).lower()
+
+    tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
+    if not tpl:
+        tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
+    if not tpl:
+        for kw, t in _ENERGY_TEMPLATE_MAP.items():
+            if kw in energy:
+                tpl = t
+                break
+    return tpl or "A"
+
 
 def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dict | None = None) -> str:
     """
@@ -757,36 +795,9 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
     ac     = brief.get("accent_color") or sc
     bg     = brief.get("bg_color", "#0F0D0C")
     tag    = brief.get("tagline", "")
-    # energy_tier varsa daha granüler, yoksa eski energy'e bak
-    energy = str(brief.get("energy_tier", brief.get("energy", "cinematic"))).lower()
 
-    # 1. Tasarım direktörü override (en yüksek öncelik)
-    tpl = (pil_params or {}).get("template", "")
-
-    # 2. Stüdyo eşlemesi
-    if not tpl:
-        tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
-
-    # 3. Energy_tier → template
-    if not tpl:
-        _ENERGY_TIER_TEMPLATE = {
-            "bold":      "A",  # color block — cesur, dolu
-            "luxury":    "B",  # dark statement — ağır, premium
-            "cinematic": "B",  # dark statement — dramatik zemin
-            "playful":   "E",  # offset block — hafif, asimetrik
-            "minimal":   "B",  # dark statement — sessiz güç
-        }
-        tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
-
-    # 4. Legacy energy keyword fallback (eski davranış korunuyor)
-    if not tpl:
-        for kw, t in _ENERGY_TEMPLATE_MAP.items():
-            if kw in energy:
-                tpl = t
-                break
-
-    if not tpl:
-        tpl = "A"
+    # 1. Tasarım direktörü override (en yüksek öncelik) → 2-4. paylaşılan resolver
+    tpl = (pil_params or {}).get("template", "") or _resolve_template(brief, studio_label)
 
     W, H = 1600, 560
     img = Image.new("RGB", (W, H), _pil_rgb(bg))
@@ -799,38 +810,47 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         d.rectangle([0, 0, bw, H], fill=_pil_rgb(pc))
         d.rectangle([bw, 0, bw + aw, H], fill=_pil_rgb(ac))
         tc = "#FFFFFF" if _is_dark_hex(pc) else "#0D0D0D"
-        _draw_wordmark(d, name, tag, 88, bw - 100, 0, H, tc)
+        _draw_wordmark(d, name, tag, 88, bw - 100, 0, H, tc, tpl)
 
     elif tpl == "B":
         # Dark statement — Pentagram / Wolff Olins
         tc = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
-        _draw_wordmark(d, name, "", 88, W - 176, 0, H, pc)
+        _draw_wordmark(d, name, "", 88, W - 176, 0, H, pc, tpl)
         fs = _bebas_size(len(name), W - 176)
-        f = _pil_font("display", fs)
+        f = _pil_font(f"tpl_{tpl}", fs)
         bb = d.textbbox((0, 0), name, font=f)
         nh = bb[3] - bb[1]
-        name_y = (H - nh) // 2 - int(H * 0.05)
-        bar_y = name_y + nh + 16
+        # NOT (3 Tem 2026 hotfix #3): bu hesap _draw_wordmark'ın İÇİNDEKİ çizimi
+        # tekrar etmiyor, sadece bar'ı doğru yere koymak için aynı geometriyi
+        # tekrar hesaplıyor — o yüzden _draw_wordmark'taki ink_top/ink_bottom
+        # düzeltmesiyle BİREBİR aynı formülü kullanmak zorunda (yoksa bar, gerçek
+        # çizilen metinle hizasız kalır). bb[1] burada kullanılmıyor çünkü ink_top
+        # zaten mutlak bir hedef pozisyon — bb[1] sadece "name_y" (çizim orijini)
+        # hesaplarken devreye girer, o hesap burada hiç yapılmıyor.
+        ink_top = (H - nh) // 2 - int(H * 0.05)
+        ink_bottom = ink_top + nh
+        bar_gap = max(16, int(nh * 0.10))
+        bar_y = ink_bottom + bar_gap
         bar_w = min(bb[2] - bb[0] + 8, W - 200)
         d.rectangle([88, bar_y, 88 + bar_w, bar_y + 10], fill=_pil_rgb(ac))
         if tag:
             tf = _pil_font("body", 28)
             tw_bb = d.textbbox((0, 0), tag.upper()[:42], font=tf)
             tw = tw_bb[2] - tw_bb[0]
-            d.text((W - 88 - tw, bar_y + 28), tag.upper()[:42], font=tf, fill=_pil_rgb(sc))
+            d.text((W - 88 - tw, bar_y + 10 + max(18, int(nh * 0.08))), tag.upper()[:42], font=tf, fill=_pil_rgb(sc))
 
     elif tpl == "C":
         # Oversized initial — Sagmeister & Walsh
         first = name[0] if name else "?"
         rest = name[1:]
         big_fs = min(490, H + 60)
-        bf = _pil_font("display", big_fs)
+        bf = _pil_font(f"tpl_{tpl}", big_fs)
         d.text((20, -int(H * 0.09)), first, font=bf, fill=_pil_rgb(pc))
         if rest:
             bb1 = d.textbbox((20, -int(H * 0.09)), first, font=bf)
             rx = max(bb1[2] - 15, int(W * 0.30))
             rest_fs = _bebas_size(len(rest), W - rx - 60)
-            rf = _pil_font("display", rest_fs)
+            rf = _pil_font(f"tpl_{tpl}", rest_fs)
             rbb = d.textbbox((0, 0), rest, font=rf)
             rh = rbb[3] - rbb[1]
             ry = (H - rh) // 2 - int(H * 0.05)
@@ -844,7 +864,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
                    (int(W * 0.46) + int(W * 0.05), H), (int(W * 0.46), H)]
         d.polygon(acc_pts, fill=_pil_rgb(ac))
         tc = "#FFFFFF" if _is_dark_hex(pc) else "#0D0D0D"
-        _draw_wordmark(d, name, tag, 88, px - 100, 0, H, tc)
+        _draw_wordmark(d, name, tag, 88, px - 100, 0, H, tc, tpl)
 
     elif tpl == "E":
         # Offset block — Base Design
@@ -853,14 +873,14 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         bh = int(H * 0.62)
         d.rectangle([bx, by, bx + bw2, by + bh], fill=_pil_rgb(pc))
         tc = "#FFFFFF" if _is_dark_hex(pc) else "#0D0D0D"
-        _draw_wordmark(d, name, tag, bx + 48, bw2 - 100, by, bh, tc)
+        _draw_wordmark(d, name, tag, bx + 48, bw2 - 100, by, bh, tc, tpl)
 
     return _png_uri(img)
 
 
 # ── MONO LOGO ─────────────────────────────────────────────────────────────────
 
-def select_logo_mono_png(brief: dict) -> str:
+def select_logo_mono_png(brief: dict, studio_label: str = "") -> str:
     """
     MONO logo: tek renk wordmark, GERÇEK şeffaf zemin (RGBA) — herhangi bir
     zemin rengine yerleştirilebilir (kit'in "mono" logo vaadi budur).
@@ -873,16 +893,20 @@ def select_logo_mono_png(brief: dict) -> str:
     - Önceden dikey hizalama bb[1] (top bearing) düşülmeden hesaplanıyordu, wordmark
       kutu içinde gözle görülür şekilde aşağı kaçıyordu. Artık merkezleme matematiği
       top bearing'i hesaba katıyor.
-    - Font hâlâ sabit Bebas Neue — brief'in seçtiği font_display'e (örn. "Playfair
-      Display", "Fredoka") dinamik eşleme bu pass'e dahil değil: bu sandbox'tan
-      Google Fonts CDN'ine erişim yok (network allowlist), doğrulamadan yeni font
-      URL'si eklemek B14'ün (sessiz font kırılması) aynısını tekrar üretir riski
-      taşıyor. Ayrı bir P1 olarak bırakıldı — Fly.io ortamında doğrulanabilir.
+
+    3 Tem 2026 fix (P1 kapandı — font artık markaya özgü):
+    - Önceden font sabit/hardcoded'dı (Bebas Neue → sonra kırık URL → sessiz sistem
+      fontu fallback'i). Artık ANA logo ile AYNI `_resolve_template()` kararını
+      kullanıyor (studio_label parametresi bunun için eklendi) — MONO/TİPO, ANA'yla
+      aynı tpl_X.ttf fontunu kullanır. Aynı markanın iki logo varyantı farklı
+      fontlarla çıkmasın diye şart: çağıran kod (html_preview.py, pipeline.py)
+      select_logo_primary_png'ye verdiği AYNI studio_label'ı buraya da vermeli.
     """
     name = brief.get("brand_name", "BRAND").upper()
     bg   = brief.get("bg_color", "#0F0D0C")
     tc   = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
     tag  = brief.get("tagline", "")
+    tpl  = _resolve_template(brief, studio_label)
 
     W, H = 1600, 420
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))   # gerçek şeffaflık
@@ -890,16 +914,23 @@ def select_logo_mono_png(brief: dict) -> str:
     tc_rgba = _pil_rgb(tc) + (255,)
 
     fs = _bebas_size(len(name), W - 100)
-    f  = _pil_font("display", fs)
+    f  = _pil_font(f"tpl_{tpl}", fs)
     bb = d.textbbox((0, 0), name, font=f)
     nh = bb[3] - bb[1]
-    name_y = (H - nh) // 2 - bb[1]          # top bearing düşüldü — artık gerçekten ortalı
+    ink_top = (H - nh) // 2
+    name_y = ink_top - bb[1]                # top bearing düşüldü — artık gerçekten ortalı
     d.text((50, name_y), name, font=f, fill=tc_rgba)
 
     if tag:
         ts = max(24, fs // 5)
         tf = _pil_font("body", ts)
-        d.text((50, name_y + nh + 18), tag.upper()[:42], font=tf, fill=tc_rgba)
+        # NOT (3 Tem 2026 hotfix #3): eskiden "name_y + nh" kullanılıyordu — name_y
+        # zaten -bb[1] içerdiği için bu, tagline'ı bb[1] kadar (Bodoni Moda'da 81px)
+        # gerçek ink_bottom'ın ÜSTÜNE çekiyordu, büyük bb[1]'li fontlarda üst üste
+        # binme riski yaratıyordu. Doğrusu ink_top + nh (= ink_bottom).
+        gap = max(20, int(fs * 0.20))
+        ink_bottom = ink_top + nh
+        d.text((50, ink_bottom + gap), tag.upper()[:42], font=tf, fill=tc_rgba)
 
     return _png_uri(img)
 
@@ -940,5 +971,10 @@ def select_logo_icon_png(brief: dict, studio_label: str = "", concept: str = "")
     if not key:
         key = "A"  # default: negative block
 
+    # Font: ikonun kendi şekil-key'i (A-D, negative/diagonal/split/frame) ile
+    # KARIŞTIRILMASIN — bu ayrı bir karar uzayı. Font, ANA logoyla aynı markaya
+    # özgü tpl_X.ttf olsun diye AYNI _resolve_template() çağrılıyor (3 Tem 2026).
+    font_tpl = _resolve_template(brief, studio_label)
+
     fn = _LETTER_ICON_FNS.get(key, _pil_icon_negative)
-    return _png_uri(fn(first, pc, bg, ac))
+    return _png_uri(fn(first, pc, bg, ac, tpl=font_tpl))
