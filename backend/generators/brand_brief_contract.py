@@ -46,10 +46,15 @@ DEFAULTS: dict[str, Any] = {
     "logo_concept":         "",
     "logo_versions":        [],
 
-    # fal.ai image prompts — Sonnet tarafından üretilen, Recraft v3 için optimize edilmiş İngilizce
+    # fal.ai image prompts — Sonnet tarafından üretilen, İngilizce
     # Boşsa image_generator.py fallback prompt kullanır
-    "fal_logo_prompt":      "",   # logo_primary slot için Recraft prompt
+    # NOT (2 Tem 2026 audit): fal_logo_prompt artık KULLANILMIYOR — logo_primary
+    # diffusion'dan çıkarıldı (PIL render'a geçti), alan geriye dönük uyumluluk
+    # için sözleşmede duruyor ama image_generator.py bunu okumuyor.
+    "fal_logo_prompt":      "",   # ARTIK KULLANILMIYOR — bkz. yukarıdaki not
     "fal_icon_prompt":      "",   # logo_icon slot için Recraft prompt
+    "fal_app1_prompt":      "",   # app1 slot için Flux prompt (İngilizce, isim+hex renk formatı)
+    "fal_app2_prompt":      "",   # app2 slot için Flux prompt (İngilizce, isim+hex renk formatı)
 
     # Strateji — brand_brief.py Sonnet üretimi
     "brand_story":          "",

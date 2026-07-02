@@ -1,15 +1,32 @@
 """
 image_generator.py — fal.ai Görsel Üretici
 
-Ne yapar    : fal.ai API ile 4 görseli paralel üretir.
-              logo_primary + logo_tipo + logo_icon → Recraft v3 (vector_illustration)
-              app1 + app2                          → Flux Schnell (editorial, JPEG)
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  2 TEM 2026 — Fable 5 audit sonrası mimari değişikliği (bkz.                 ║
+║  brandgen-gorsel-audit-2tem2026.md + _knowledge/bekleyen-gorevler.md)        ║
+║                                                                              ║
+║  ESKİ: logo_primary + logo_tipo + logo_icon → Recraft v3 (3 çağrı)          ║
+║  YENİ: logo_primary + logo_tipo artık BURADA ÜRETİLMİYOR.                   ║
+║        html_preview.py bunları logo_generator.py'nin PIL fonksiyonlarından  ║
+║        (select_logo_primary_png / select_logo_mono_png) alıyor.            ║
+║  SEBEP (audit B1/B4): diffusion modelden "marka adını doğru yaz" istemek   ║
+║  en yüksek başarısızlık oranlı görev türü — Türkçe karakterli isimlerde    ║
+║  (İ→I, Ş→S ASCII stripping) logo baştan yanlış yazılıyordu. PIL render     ║
+║  %100 doğru yazar, hiç diffusion riski taşımaz.                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Ne yapar    : fal.ai API ile 3 görseli paralel üretir (önceden 5'ti).
+              logo_icon        → Recraft v3 (vector_illustration) — soyut geometrik mark,
+                                  exact-text istemiyor, diffusion için uygun bir görev.
+              app1 + app2      → Flux Schnell (editorial, JPEG)
 
 Kime bağlı  : html_preview.py → generate_all_images(brief) çağrısı
-Döner       : {"logo_primary": ..., "logo_tipo": ..., "logo_icon": ..., "app1": ..., "app2": ...}
+Döner       : {"logo_icon": ..., "app1": ..., "app2": ...}
 Bozulursa   : Hatalı slot "" döner — html_preview pipeline kırılmaz, o slot gizlenir.
-Maliyet     : Recraft ×3 (~$0.12) + Flux ×2 (~$0.006) = ~$0.13/üretim
-Türkçe      : Marka adı _ascii_safe() ile temizlenir — AI görsel promptunda Türkçe karakter gitMEZ.
+Maliyet     : Recraft ×1 (~$0.04) + Flux ×2 (~$0.006) = ~$0.05/üretim
+              (önceki ~$0.13'ten düştü — 2 gereksiz/riskli Recraft çağrısı kaldırıldı)
+Türkçe      : Marka adı _ascii_safe() ile temizlenir — sadece logo_icon fallback'inde
+              kullanılıyor (ikon promptunda marka adı zaten harfe indirgeniyor, risk düşük).
 """
 
 import os
@@ -19,76 +36,34 @@ import httpx
 import fal_client
 
 
-# ── Türkçe karakter koruma ────────────────────────────────────────────────────
+# ── Türkçe karakter koruma (sadece fallback prompt'larda, exact-text render'da DEĞİL) ──
 def _ascii_safe(name: str) -> str:
     """İ→I, Ş→S vb. — AI prompt'a gönderilirken Türkçe karakter gitmesin."""
     tr_map = str.maketrans("İĞÜŞÖÇığüşöç", "IGUSSOigusso")
     return name.translate(tr_map)
 
 
+def _safe_trunc(text: str, n: int) -> str:
+    """Kelime ortasından kesmeden güvenli kısaltma (audit B2 fix).
+    Önceki `text[:100]` kelimeyi ortadan kesip diffusion prompt'una gürültü katıyordu."""
+    text = (text or "").strip()
+    if len(text) <= n:
+        return text
+    cut = text[:n].rsplit(" ", 1)[0]
+    return cut if cut else text[:n]
+
+
+def _color_note(hex_code: str, name: str = "") -> str:
+    """Flux hex kodunu büyük ölçüde yok sayıyor (audit B6) — renk adı + hex birlikte yaz."""
+    hex_code = hex_code or "#333333"
+    return f"{name} ({hex_code})".strip() if name else hex_code
+
+
 # ── Prompt üreticiler ─────────────────────────────────────────────────────────
-
-def _logo_primary_prompt(brief: dict) -> str:
-    # Önce Sonnet'in ürettiği Recraft-optimized prompt'u kullan
-    fal_prompt = brief.get("fal_logo_prompt", "").strip()
-    if fal_prompt and len(fal_prompt) > 30:
-        return fal_prompt
-
-    # Fallback: brief alanlarından generic prompt
-    name      = _ascii_safe(brief.get("brand_name", "BRAND"))
-    primary   = brief.get("primary_color", "#333333")
-    secondary = brief.get("secondary_color", "#888888")
-    bg        = brief.get("bg_color", "#FFFFFF")
-    energy    = brief.get("energy", "cinematic")
-    tagline   = brief.get("tagline", "")
-    concept   = brief.get("concept_statement", "")
-    sector    = brief.get("studio_dna", {}).get("sector", "")
-    mood      = ", ".join(brief.get("mood_words", [])[:3])
-
-    style = "bold energetic playful" if energy == "playful" else "premium cinematic minimal"
-    return (
-        f'Vector logo for brand "{name}"{(" — " + sector) if sector else ""}. '
-        f'Wordmark: the text "{name}" is the dominant element. '
-        f'{concept[:100] + ". " if concept else ""}'
-        f'{mood + ". " if mood else ""}'
-        f'{style} visual style. '
-        f'Colors: {primary} dominant on {bg} background, {secondary} accent. '
-        f'Horizontal format. No gradients. No shadows. Vector illustration.'
-    ).strip()
-
-
-def _logo_tipo_prompt(brief: dict) -> str:
-    """Tipo (yaratıcı tipografik wordmark) için Recraft prompt.
-    Amaç: marka adı merkezde, yaratıcı harf tasarımı — sahneden bağımsız grafik wordmark."""
-    name      = _ascii_safe(brief.get("brand_name", "BRAND"))
-    primary   = brief.get("primary_color", "#333333")
-    secondary = brief.get("secondary_color", "#888888")
-    bg        = brief.get("bg_color", "#FFFFFF")
-    energy    = brief.get("energy", "cinematic")
-    font_display = brief.get("font_display", "")
-    mood      = ", ".join(brief.get("mood_words", [])[:3])
-    concept   = brief.get("concept_statement", "")[:80]
-
-    if energy == "playful":
-        style_hint = "playful bold hand-lettered typography, bouncy rounded letterforms, fun graphic wordmark"
-        color_note = f"vibrant {primary} lettering on {bg}, {secondary} decorative accents on letters"
-    else:
-        style_hint = "elegant custom lettering, refined typographic wordmark, editorial brand typography"
-        color_note = f"{primary} letterforms on {bg} background, {secondary} as subtle accent"
-
-    font_hint = f"lettering style inspired by {font_display}. " if font_display else ""
-
-    return (
-        f'Creative typographic wordmark for brand "{name}". '
-        f'The word "{name}" rendered as custom lettering — {style_hint}. '
-        f'{font_hint}'
-        f'{concept + ". " if concept else ""}'
-        f'{mood + ". " if mood else ""}'
-        f'{color_note}. '
-        f'Horizontal wordmark layout. Flat vector graphic. '
-        f'The brand name text is the dominant visual element.'
-    ).strip()
-
+# NOT (2 Tem 2026): logo_primary/logo_tipo prompt fonksiyonları kaldırıldı —
+# bu slotlar artık diffusion'a hiç gitmiyor (bkz. dosya başlığı). logo_icon ve
+# app1/app2 kalıyor çünkü bunlar "exact metin yaz" istemiyor, diffusion için
+# uygun görevler.
 
 def _logo_icon_prompt(brief: dict) -> str:
     # Önce Sonnet'in ürettiği Recraft-optimized prompt'u kullan
@@ -96,39 +71,43 @@ def _logo_icon_prompt(brief: dict) -> str:
     if fal_prompt and len(fal_prompt) > 30:
         return fal_prompt
 
-    # Fallback: brief alanlarından generic prompt
+    # Fallback: brief alanlarından generic prompt (audit B2 fix: kelime ortası kesme yok)
     name      = _ascii_safe(brief.get("brand_name", "BRAND"))
     letter    = name[0].upper() if name else "B"
     primary   = brief.get("primary_color", "#333333")
     bg        = brief.get("bg_color", "#FFFFFF")
     secondary = brief.get("secondary_color", "#888888")
     energy    = brief.get("energy", "cinematic")
-    concept   = brief.get("concept_statement", "")
+    concept   = _safe_trunc(brief.get("concept_statement", ""), 100)
     mood      = ", ".join(brief.get("mood_words", [])[:2])
 
     style = "bold geometric playful" if energy == "playful" else "minimal premium geometric"
     return (
         f'App icon mark for "{name}" brand. '
         f'Abstract geometric symbol built from the letter "{letter}". '
-        f'{concept[:100] + ". " if concept else ""}'
+        f'{concept + ". " if concept else ""}'
         f'{mood + ". " if mood else ""}'
         f'{style} design. '
-        f'Colors: {primary} on {bg} background, {secondary} accent. '
+        f'Colors: {_color_note(primary)} on {_color_note(bg)} background, {_color_note(secondary)} accent. '
         f'Square format. No text. Scalable geometric shape. Clean edges. '
         f'Vector illustration.'
     ).strip()
 
 
 def _app1_prompt(brief: dict) -> str:
+    # Önce Sonnet'in ürettiği İngilizce, Recraft/Flux-optimize prompt'u kullan (audit aksiyon #2)
+    fal_prompt = brief.get("fal_app1_prompt", "").strip()
+    if fal_prompt and len(fal_prompt) > 30:
+        return fal_prompt
+
+    # Fallback: brief alanlarından generic prompt (audit B2/B6 fix: güvenli kesme + isim+hex renk)
     name      = _ascii_safe(brief.get("brand_name", "BRAND"))
     primary   = brief.get("primary_color", "#333333")
     bg        = brief.get("bg_color", "#111111")
     energy    = brief.get("energy", "cinematic")
-    concept   = brief.get("concept_statement", "")
     sector    = brief.get("studio_dna", {}).get("sector", brief.get("sector", ""))
     mood_raw  = brief.get("mood_words", [])
     mood      = ", ".join(mood_raw[:3]) if mood_raw else ""
-    visual    = brief.get("visual_language", "")[:120]
 
     if energy == "playful":
         atm = "vivid, colorful, joyful, bold graphic illustration, flat design, playful"
@@ -139,10 +118,8 @@ def _app1_prompt(brief: dict) -> str:
     return (
         f'Editorial social media visual for "{name}"{(" — " + sector) if sector else ""}. '
         f'{atm} atmosphere. '
-        f'{concept[:120] + ". " if concept else ""}'
-        f'{visual + ". " if visual else ""}'
         f'{mood + ". " if mood else ""}'
-        f'Dominant color: {primary} on {bg} background. '
+        f'Dominant color: {_color_note(primary)} on {_color_note(bg)} background. '
         f'NO text. NO logo. NO watermark. '
         f'{style} '
         f'Square 1:1 format, high quality.'
@@ -150,37 +127,40 @@ def _app1_prompt(brief: dict) -> str:
 
 
 def _app2_prompt(brief: dict) -> str:
+    # Önce Sonnet'in ürettiği İngilizce prompt'u kullan (audit aksiyon #2)
+    fal_prompt = brief.get("fal_app2_prompt", "").strip()
+    if fal_prompt and len(fal_prompt) > 30:
+        return fal_prompt
+
+    # Fallback: brief alanlarından generic prompt (audit B2/B6/B7 fix)
     name      = _ascii_safe(brief.get("brand_name", "BRAND"))
     secondary = brief.get("secondary_color", "#888888")
-    primary   = brief.get("primary_color", "#333333")
     bg        = brief.get("bg_color", "#111111")
     energy    = brief.get("energy", "cinematic")
-    concept   = brief.get("concept_statement", "")
     sector    = brief.get("studio_dna", {}).get("sector", brief.get("sector", ""))
     mood_raw  = brief.get("mood_words", [])
     mood      = ", ".join(mood_raw[1:4]) if len(mood_raw) > 1 else ""
-    visual    = brief.get("visual_language", "")[:100]
 
     if energy == "playful":
-        # Playful markalarda soyut geometri yerine marka dünyasını yansıtan sahne
+        # B7 fix: sabit "anaokulu" sahnesi (confetti/art supplies) kaldırıldı —
+        # sektörden bağımsız jenerik sahne yerine mood/sector'e bağlı kalıyor.
         atm = (
             "vibrant flat illustration, bold graphic art, colorful pattern composition. "
-            f"Scattered creative tools, art supplies, paint splashes, stars and confetti. "
-            f"Joyful, chaotic, childlike energy. Bright {primary} and {secondary} on {bg} background. "
+            f"Playful abstract shapes reflecting the brand's world"
+            f'{(" for a " + sector) if sector else ""}. '
+            f"Joyful, energetic mood. Bright {_color_note(secondary)} accents. "
             "NO characters. NO text. NO logo. Pure graphic surface pattern."
         )
     else:
         atm = (
             f"minimal bold editorial, abstract architectural composition. "
-            f"Dominant {secondary} on {bg} background. "
+            f"Dominant {_color_note(secondary)} on {_color_note(bg)} background. "
             f"{mood + '. ' if mood else ''}"
             "NO text. NO logo. Pure abstract or conceptual art."
         )
     return (
         f'Brand identity visual for "{name}"{(" — " + sector) if sector else ""}. '
         f'{atm} '
-        f'{concept[:100] + ". " if concept else ""}'
-        f'{visual + ". " if visual else ""}'
         f'Square 1:1 format, high quality.'
     ).strip()
 
@@ -206,15 +186,17 @@ async def _download_b64(url: str, mime: str) -> str:
         return f"data:{mime};base64,{b64}"
 
 
-async def _recraft_logo(prompt: str) -> str:
-    """Recraft v3 — vector_illustration stili. ANA logo ve İKON için (editorial illüstrasyon)."""
+async def _recraft_icon(prompt: str) -> str:
+    """Recraft v3 — vector_illustration stili. Sadece İKON için (soyut geometrik mark,
+    exact-text istemiyor — diffusion için uygun görev). 2 Tem 2026: logo_primary/tipo
+    buradan kaldırıldı, bkz. dosya başlığı."""
     try:
         result = await asyncio.to_thread(
             fal_client.run,
             "fal-ai/recraft-v3",
             arguments={
                 "prompt": prompt,
-                "image_size": "square_hd",       # 1024×1024
+                "image_size": "square_hd",       # 1024×1024 — ikon zaten kare, çelişki yok
                 "style": "vector_illustration",
                 "num_images": 1,
             },
@@ -222,29 +204,7 @@ async def _recraft_logo(prompt: str) -> str:
         url = result["images"][0]["url"]
         return await _download_b64(url, "image/png")
     except Exception as e:
-        print(f"[image_generator] Recraft hata (logo): {e}")
-        return ""
-
-
-async def _recraft_tipo(prompt: str) -> str:
-    """Recraft v3 — vector_illustration stili. TİPO için (yaratıcı tipografik wordmark).
-    Not: vector_illustration/flat_art Recraft API'sinde desteklenmiyor — vector_illustration kullan.
-    square_hd: landscape_16_9 Recraft'ta hata verebilir, square_hd daha kararlı."""
-    try:
-        result = await asyncio.to_thread(
-            fal_client.run,
-            "fal-ai/recraft-v3",
-            arguments={
-                "prompt": prompt,
-                "image_size": "square_hd",          # landscape_16_9 riskli, square_hd kararlı
-                "style": "vector_illustration",     # flat_art alt-stil Recraft API'sinde yok
-                "num_images": 1,
-            },
-        )
-        url = result["images"][0]["url"]
-        return await _download_b64(url, "image/png")
-    except Exception as e:
-        print(f"[image_generator] Recraft hata (tipo): {e}")
+        print(f"[image_generator] Recraft hata (icon): {e}")
         return ""
 
 
@@ -273,32 +233,30 @@ async def _flux_app(prompt: str) -> str:
 
 def generate_all_images(brief: dict) -> dict:
     """
-    4 görseli paralel üret.
+    3 görseli paralel üret (2 Tem 2026 öncesi 5'ti — logo_primary/tipo artık
+    logo_generator.py'nin PIL fonksiyonlarından geliyor, bkz. dosya başlığı).
 
     Parametreler:
         brief : normalize edilmiş brand brief dict
 
     Döner:
         {
-            "logo_primary": "data:image/svg+xml;base64,...",  # veya ""
-            "logo_icon":    "data:image/svg+xml;base64,...",
-            "app1":         "data:image/jpeg;base64,...",
-            "app2":         "data:image/jpeg;base64,...",
+            "logo_icon": "data:image/png;base64,...",   # veya ""
+            "app1":      "data:image/png;base64,...",
+            "app2":      "data:image/png;base64,...",
         }
     Hatalı slotlar "" döner — template boş slotu gizler, pipeline kırılmaz.
     """
     async def _run():
         return await asyncio.gather(
-            _recraft_logo(_logo_primary_prompt(brief)),
-            _recraft_tipo(_logo_tipo_prompt(brief)),   # flat_art stili — yaratıcı wordmark
-            _recraft_logo(_logo_icon_prompt(brief)),
+            _recraft_icon(_logo_icon_prompt(brief)),
             _flux_app(_app1_prompt(brief)),
             _flux_app(_app2_prompt(brief)),
             return_exceptions=True,
         )
 
     results = asyncio.run(_run())
-    keys = ["logo_primary", "logo_tipo", "logo_icon", "app1", "app2"]
+    keys = ["logo_icon", "app1", "app2"]
     return {
         k: (r if isinstance(r, str) else "")
         for k, r in zip(keys, results)

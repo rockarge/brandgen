@@ -10,17 +10,22 @@
 ║  ve brandgen-mimari.md §5'i de güncelle.                                    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
-BrandGen HTML Kit v3 — fal.ai Görsel Pipeline
+BrandGen HTML Kit v3 — PIL Wordmark + fal.ai Görsel Pipeline
 
-Pipeline:
+Pipeline (2 Tem 2026 audit sonrası güncellendi — bkz. brandgen-gorsel-audit-2tem2026.md):
   1. brand_brief.py (Sonnet) → hikaye, konsept, ses/ton üretir (önceki aşamada oldu)
-  2. select_logo_mono_png()  → PIL ile beyaz wordmark (logo_mono)
-  3. generate_all_images()   → fal.ai paralel:
-       logo_primary + logo_tipo + logo_icon → Recraft v3 (vector_illustration)
-       app1 + app2                         → Flux Schnell (editorial fotoğraf, JPEG)
-  4. window.BRAND JSON inject → brandkit-template.html
+  2. select_logo_primary_png() → PIL, brief'in template/stüdyo/energy kararına göre ANA logo
+  3. select_logo_mono_png()    → PIL ile tek renk şeffaf wordmark (logo_mono + logo_tipo)
+  4. generate_all_images()     → fal.ai paralel:
+       logo_icon    → Recraft v3 (vector_illustration) — soyut geometrik mark
+       app1 + app2  → Flux Schnell (editorial fotoğraf, JPEG)
+  5. window.BRAND JSON inject → brandkit-template.html
 
-Maliyet: ~$0.13/üretim (Recraft ×3 + Flux ×2)
+  NOT: logo_primary/logo_tipo artık diffusion'a (Recraft) gitmiyor — PIL render
+  marka adını her zaman doğru yazar, diffusion'ın Türkçe karakter hallüsinasyonu
+  (audit B1) riskini tamamen ortadan kaldırır.
+
+Maliyet: ~$0.05/üretim (Recraft ×1 + Flux ×2) — önceki ~$0.13'ten düştü.
 """
 
 import os
@@ -30,8 +35,8 @@ import base64
 import colorsys
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
-from generators.logo_generator import select_logo_mono_png
-from generators.image_generator import generate_all_images  # fal.ai: logo + app görselleri
+from generators.logo_generator import select_logo_mono_png, select_logo_primary_png
+from generators.image_generator import generate_all_images  # fal.ai: icon + app görselleri
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
 
@@ -78,16 +83,22 @@ def generate_html_preview(brief: dict) -> tuple:
         template = f.read()
 
     # ── Görsel üretim ─────────────────────────────────────────────────────────
-    # logo_mono: PIL wordmark (beyaz, şeffaf zemin)
+    # logo_primary + logo_mono/tipo: PIL render — marka adı her zaman doğru yazılır,
+    # diffusion'a hiç gitmez (2 Tem 2026 audit fix, bkz. dosya başlığı).
+    studio_label = brief.get("studio_dna", {}).get("label", "")
     svgs = {
-        "logo_mono": select_logo_mono_png(brief),
+        "logo_primary": select_logo_primary_png(brief, studio_label=studio_label),
+        "logo_mono":    select_logo_mono_png(brief),
     }
+    # logo_tipo: ayrı bir diffusion çağrısı yerine mono'nun (şeffaf, tek renk) tekrar
+    # kullanımı — B4'teki "diffusion'dan exact-text custom lettering iste" görevi
+    # istatistiksel olarak en yüksek başarısızlık oranlıydı, karşılığı yoktu.
+    svgs["logo_tipo"] = svgs["logo_mono"]
 
-    # fal.ai: logo_primary, logo_tipo, logo_icon (Recraft v3), app1, app2 (Flux JPEG)
+    # fal.ai: sadece logo_icon (Recraft v3 — soyut geometrik, exact-text istemiyor),
+    # app1, app2 (Flux JPEG)
     fal_images = generate_all_images(brief)
-    svgs["logo_primary"] = fal_images.get("logo_primary", "")
-    svgs["logo_tipo"]    = fal_images.get("logo_tipo", "")
-    svgs["logo_icon"]    = fal_images.get("logo_icon", "")
+    svgs["logo_icon"] = fal_images.get("logo_icon", "")
     svgs["app1"] = fal_images.get("app1", "")
     svgs["app2"] = fal_images.get("app2", "")
 
