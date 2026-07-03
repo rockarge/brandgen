@@ -1,3 +1,15 @@
+/**
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  /api/generate — Ana üretim route'u                                      ║
+ * ║  Deploy: deploy.command (çift tıkla) → GitHub ROOT → Vercel             ║
+ * ║                                                                           ║
+ * ║  NE YAPAR: jobs tablosuna "pending" kayıt açar, Fly.io backend'i çağırır║
+ * ║  BAĞIMLILIK: BACKEND_URL (env), supabase, tier/credits sistemi           ║
+ * ║  BOZULURSA: hiçbir üretim başlamaz                                       ║
+ * ║  TİER: free=Haiku, paid tiers cookie'den okunur (bg_session)            ║
+ * ║  DOKUNMA: tier mapping, backend URL, job schema değişince                ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { randomUUID } from "crypto";

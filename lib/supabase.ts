@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-// BG_* oneki: Vercel Supabase entegrasyon override'indan muaf (her zaman dogru proje)
-// SUPABASE_* fallback: Vercel entegrasyonu tarafindan yanlis projeye set edilmis olabilir
+// BG_* öneki: Vercel Supabase entegrasyon override'ından muaf (her zaman doğru proje)
+// SUPABASE_* fallback: Vercel entegrasyonu tarafından yanlış projeye set edilmiş olabilir
 const supabaseUrl     = process.env.BG_SUPABASE_URL      || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.BG_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 

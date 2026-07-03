@@ -1,3 +1,15 @@
+/**
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  /api/admin/stats — Admin istatistik API'si                              ║
+ * ║  Deploy: deploy.command (çift tıkla) → GitHub ROOT → Vercel             ║
+ * ║                                                                           ║
+ * ║  NE YAPAR: jobs tablosunu okur, gelir/maliyet/cihaz/kaynak özetler       ║
+ * ║  BAĞIMLILIK: ADMIN_PASSWORD (env), supabase jobs tablosu                 ║
+ * ║  BOZULURSA: admin dashboard yüklenmez                                    ║
+ * ║  GÜVENLİK: her request'te ADMIN_PASSWORD header kontrolü yapar           ║
+ * ║  DOKUNMA: yeni metrik eklenince, jobs tablosuna yeni kolon gelince       ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
