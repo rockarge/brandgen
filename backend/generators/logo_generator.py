@@ -386,10 +386,40 @@ def _pil_rgb(h: str) -> tuple:
 
 def _bebas_size(char_count: int, avail_w: int, max_s: int = 220, min_s: int = 28) -> int:
     """
-    Bebas Neue için yaklaşık font boyutu.
-    Her karakter ≈ size × 0.50px genişlik (condensed font).
+    ESKİ — sadece Bebas Neue'ye özel kalibrasyon (her karakter ≈ size×0.50px,
+    condensed font varsayımı). 3 Tem 2026 hotfix #5'te yerini `_fit_font_size()`e
+    bıraktı (bkz. altı) — artık kod tabanında hiçbir yerden ÇAĞRILMIYOR, referans
+    için duruyor. Kök neden: Bodoni Moda/Archivo Black gibi geniş fontlarda bu
+    formül gerçek glyph genişliğinden çok küçük tahmin ediyordu → hesaplanan font
+    boyutu olması gerekenden büyük çıkıyordu → wordmark 1600px canvas'ı taşıyordu
+    (Noir Atelier testinde "ANA/TİPO/MONO alana sığmıyor" diye yakalandı).
     """
     return max(min_s, min(max_s, int(avail_w / max(char_count, 1) / 0.50)))
+
+
+def _fit_font_size(text: str, font_name: str, avail_w: int, max_s: int = 220, min_s: int = 28) -> int:
+    """
+    3 Tem 2026 hotfix #5 — font-agnostic sığdırma. `_bebas_size()`nin aksine
+    tek bir fontun karakter/genişlik oranını varsaymaz: GERÇEK fontta (tpl_A..E
+    veya body) referans boyutta metni ölçüp avail_w'ye orantılı olarak ölçekler.
+    5 curated font çok farklı genişliklere sahip olduğu için (Anton dar,
+    Bodoni Moda/Archivo Black geniş) tek formülle hepsini doğru sığdırmak
+    mümkün değildi — bu yüzden her font kendi gerçek metriğiyle ölçülüyor.
+    %4 güvenlik payı bırakır (hinting/subpixel farkları taşırmasın diye).
+    """
+    ref = 200
+    f = _pil_font(font_name, ref)
+    try:
+        w = f.getlength(text)
+    except Exception:
+        tmp = Image.new("RGB", (10, 10))
+        d = ImageDraw.Draw(tmp)
+        bb = d.textbbox((0, 0), text, font=f)
+        w = bb[2] - bb[0]
+    if not w or w <= 0:
+        return max_s
+    size = int(ref * (avail_w / w) * 0.96)
+    return max(min_s, min(max_s, size))
 
 
 # ── GEOMETRIK MARKLAR — sıfır typography, salt form ─────────────────────────
@@ -692,7 +722,7 @@ def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
     font değil (bkz. _resolve_template).
     area_top + area_h alanının içine dikey olarak ortalar.
     """
-    fs = _bebas_size(len(name), avail_w)
+    fs = _fit_font_size(name, f"tpl_{tpl}", avail_w)
     f = _pil_font(f"tpl_{tpl}", fs)
     bb = d.textbbox((0, 0), name, font=f)
     nh = bb[3] - bb[1]
@@ -832,7 +862,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         # Dark statement — Pentagram / Wolff Olins
         tc = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
         _draw_wordmark(d, name, "", 88, W - 176, 0, H, pc, tpl)
-        fs = _bebas_size(len(name), W - 176)
+        fs = _fit_font_size(name, f"tpl_{tpl}", W - 176)
         f = _pil_font(f"tpl_{tpl}", fs)
         bb = d.textbbox((0, 0), name, font=f)
         nh = bb[3] - bb[1]
@@ -865,7 +895,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         if rest:
             bb1 = d.textbbox((20, -int(H * 0.09)), first, font=bf)
             rx = max(bb1[2] - 15, int(W * 0.30))
-            rest_fs = _bebas_size(len(rest), W - rx - 60)
+            rest_fs = _fit_font_size(rest, f"tpl_{tpl}", W - rx - 60)
             rf = _pil_font(f"tpl_{tpl}", rest_fs)
             rbb = d.textbbox((0, 0), rest, font=rf)
             rh = rbb[3] - rbb[1]
@@ -929,7 +959,7 @@ def select_logo_mono_png(brief: dict, studio_label: str = "") -> str:
     d   = ImageDraw.Draw(img)
     tc_rgba = _pil_rgb(tc) + (255,)
 
-    fs = _bebas_size(len(name), W - 100)
+    fs = _fit_font_size(name, f"tpl_{tpl}", W - 100)
     f  = _pil_font(f"tpl_{tpl}", fs)
     bb = d.textbbox((0, 0), name, font=f)
     nh = bb[3] - bb[1]
