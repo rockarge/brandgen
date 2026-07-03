@@ -4,7 +4,7 @@ SVG template sistemi kullanılmadığı için legacy_svg_generator.py'ye taşın
 
   1. PIL RASTER (satır ~79-297): generate_logo_primary/icon/reversed/social_post()
      → pipeline.py besliyor (run_pipeline watermarklı preview + finalize_job ZIP).
-  2. PIL v2 (satır ~900+): select_logo_primary_png/mono_png/icon_png()
+  2. PIL v2 (satır ~900+): select_logo_primary_png/mono_png/tipo_png/icon_png()
      → html_preview.py besliyor (fal.ai ile birlikte, ödeme öncesi HTML preview).
 
 _is_dark_hex(): her iki katman da kullanıyor, aşağıda tek yerde tanımlı kaldı.
@@ -1020,6 +1020,136 @@ def select_logo_mono_png(brief: dict, studio_label: str = "") -> str:
         gap = max(20, int(fs * 0.20))
         ink_bottom = ink_top + nh
         d.text((50, ink_bottom + gap), tag.upper()[:42], font=tf, fill=tc_rgba)
+
+    return _png_uri(img)
+
+
+# ── TİPO LOGO ─────────────────────────────────────────────────────────────────
+# 3 Tem 2026 eklendi. TİPO, MONO'nun kopyası DEĞİL — html_preview.py'de
+# `svgs["logo_tipo"] = svgs["logo_mono"]` bug'ı burada düzeltiliyor (bkz.
+# html_preview.py ve pipeline.py'deki ilgili değişiklikler). Bu fonksiyon A/B/C/D/E
+# layout sistemine (select_logo_primary_png) GİRMEZ — ayrı, tek bir kompozisyon:
+# bg_color dolu zemin + ortalanmış letter-spaced wordmark + accent nokta + tracked
+# tagline. Font kararı yine _resolve_template()'ten gelir — marka tutarlılığı korunur.
+
+_TIPO_TRACKING = {
+    "playful":   0.03,
+    "cinematic": 0.08,
+    "luxury":    0.14,
+    "minimal":   0.14,
+    "premium":   0.14,
+}
+
+
+def _tracked_width(text: str, font: "ImageFont.FreeTypeFont", tracking: int) -> float:
+    """Harf harf ölçülen genişlik + harfler arası tracking boşluğu (son harften sonra yok)."""
+    return sum(font.getlength(ch) for ch in text) + tracking * max(0, len(text) - 1)
+
+
+def _draw_tracked(d: "ImageDraw.ImageDraw", text: str, font: "ImageFont.FreeTypeFont",
+                   x: float, y: float, fill, tracking: int) -> float:
+    """Harf harf, tracking px aralıkla çizer. Son harfin sağ kenarının x'ini döner
+    (accent nokta / sonraki eleman konumlandırması için)."""
+    cx = x
+    for ch in text:
+        d.text((cx, y), ch, font=font, fill=fill)
+        cx += font.getlength(ch) + tracking
+    return cx - tracking
+
+
+def select_logo_tipo_png(brief: dict, studio_label: str = "") -> str:
+    """
+    TİPO logo: markaya özgü tipografik kimlik — marka renkleriyle, bg_color
+    dolu zemin üstünde, geometrik blok/şekil OLMADAN.
+
+    MONO'dan farkı (yapısal, garanti — bkz. test_logo_tipo.py):
+      - RGB dolu zemin (bg_color)  ← mono RGBA gerçek şeffaf
+      - primary_color wordmark     ← mono nötr (#F2EDE4/#1A1A1A)
+      - ortalı + letter-spacing    ← mono sola yaslı, tracking yok
+      - accent nokta devicesi      ← mono'da yok
+    PRIMARY'den farkı: renk bloğu/polygon/bar yok — salt tipografi + tracking.
+
+    Font: _resolve_template() → tpl_X.ttf (ANA/MONO ile aynı — marka tutarlılığı,
+    3 Tem 2026 font-per-marka kuralı).
+
+    PNG data URI döner. Deterministik — diffusion yok, Türkçe karakter riski yok.
+    """
+    name   = brief.get("brand_name", "BRAND").upper()
+    pc     = brief.get("primary_color", "#C9A25A")
+    sc     = brief.get("secondary_color", "#8B8B7A")
+    ac     = brief.get("accent_color") or sc
+    bg     = brief.get("bg_color", "#0F0D0C")
+    tag    = brief.get("tagline", "")
+    tpl    = _resolve_template(brief, studio_label)
+
+    energy = str(brief.get("energy_tier", brief.get("energy", "cinematic"))).lower()
+    k = _TIPO_TRACKING.get(energy, _TIPO_TRACKING["cinematic"])
+
+    # Kontrast guard — pc bg ile aynı koyu/açık kategorideyse nötre düş
+    # (Meridyen Galeri dersi, hotfix #7 ile aynı pattern — bkz. select_logo_primary_png tpl C).
+    wm_color = pc if _is_dark_hex(pc) != _is_dark_hex(bg) else (
+        "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+    )
+    tag_color = sc if _is_dark_hex(sc) != _is_dark_hex(bg) else (
+        "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+    )
+
+    W, H = 1600, 520
+    img = Image.new("RGB", (W, H), _pil_rgb(bg))
+    d = ImageDraw.Draw(img)
+
+    avail_w = W - 160  # kenar payı
+
+    # fs sığdırma — _fit_font_size tracking bilmiyor, kapalı formülle orantılı çözülüyor
+    ref = 200
+    f_ref = _pil_font(f"tpl_{tpl}", ref)
+    w_ref = sum(f_ref.getlength(ch) for ch in name)
+    per_fs = w_ref / ref + k * max(0, len(name) - 1)
+    fs = int((avail_w * 0.96) / per_fs) if per_fs > 0 else 120
+    fs = max(28, min(200, fs))
+    if fs <= 28:
+        # Uzun marka adı guard'ı — tracking'i sıfırla, yeniden hesapla (taşmasın)
+        k = 0
+        per_fs = w_ref / ref
+        fs = int((avail_w * 0.96) / per_fs) if per_fs > 0 else 120
+        fs = max(28, min(200, fs))
+
+    f = _pil_font(f"tpl_{tpl}", fs)
+    tracking = int(k * fs)
+
+    total_w = _tracked_width(name, f, tracking)
+    dot_r = max(2, int(fs * 0.14) // 2)
+    dot_gap = int(0.35 * tracking + fs * 0.08)
+    total_w_with_dot = total_w + dot_gap + dot_r
+
+    bb = d.textbbox((0, 0), name, font=f)
+    nh = bb[3] - bb[1]
+    # hotfix #3 pattern: ink_top hedef, origin (y) = ink_top - bb[1]
+    ink_top = (H - nh) // 2 - int(H * 0.04)
+    y = ink_top - bb[1]
+    x = (W - total_w_with_dot) // 2
+
+    last_x = _draw_tracked(d, name, f, x, y, _pil_rgb(wm_color), tracking)
+
+    # Accent nokta — gerçek font baseline'ında (ascent üzerinden hesaplanır)
+    ascent, _descent = f.getmetrics()
+    baseline_y = y + ascent
+    dot_cx = last_x + dot_gap
+    d.ellipse(
+        [dot_cx - dot_r, baseline_y - dot_r, dot_cx + dot_r, baseline_y + dot_r],
+        fill=_pil_rgb(ac),
+    )
+
+    if tag:
+        ts = max(22, fs // 6)
+        tf = _pil_font("body", ts)
+        tag_text = tag.upper()[:42]
+        tag_tracking = int(0.30 * ts)
+        tag_w = _tracked_width(tag_text, tf, tag_tracking)
+        tag_x = (W - tag_w) // 2
+        ink_bottom = ink_top + nh
+        tag_y = ink_bottom + int(fs * 0.22)
+        _draw_tracked(d, tag_text, tf, tag_x, tag_y, _pil_rgb(tag_color), tag_tracking)
 
     return _png_uri(img)
 

@@ -15,15 +15,18 @@ BrandGen HTML Kit v3 — PIL Wordmark + fal.ai Görsel Pipeline
 Pipeline (2 Tem 2026 audit sonrası güncellendi — bkz. brandgen-gorsel-audit-2tem2026.md):
   1. brand_brief.py (Sonnet) → hikaye, konsept, ses/ton üretir (önceki aşamada oldu)
   2. select_logo_primary_png() → PIL, brief'in template/stüdyo/energy kararına göre ANA logo
-  3. select_logo_mono_png()    → PIL ile tek renk şeffaf wordmark (logo_mono + logo_tipo)
+  3. select_logo_mono_png()    → PIL ile tek renk, GERÇEK şeffaf zemin (RGBA) wordmark
+  3b. select_logo_tipo_png()   → PIL ile bg_color dolu zemin + tracked wordmark + accent
+                                  nokta (3 Tem 2026: artık mono'nun kopyası DEĞİL, ayrı
+                                  fonksiyon — bkz. logo_generator.py "TİPO LOGO" bölümü)
   4. generate_all_images()     → fal.ai paralel:
        logo_icon    → Recraft v3 (vector_illustration) — soyut geometrik mark
        app1 + app2  → Flux Schnell (editorial fotoğraf, JPEG)
   5. window.BRAND JSON inject → brandkit-template.html
 
-  NOT: logo_primary/logo_tipo artık diffusion'a (Recraft) gitmiyor — PIL render
-  marka adını her zaman doğru yazar, diffusion'ın Türkçe karakter hallüsinasyonu
-  (audit B1) riskini tamamen ortadan kaldırır.
+  NOT: logo_primary/logo_mono/logo_tipo artık diffusion'a (Recraft) gitmiyor — PIL
+  render marka adını her zaman doğru yazar, diffusion'ın Türkçe karakter
+  hallüsinasyonu (audit B1) riskini tamamen ortadan kaldırır.
 
 Maliyet: ~$0.05/üretim (Recraft ×1 + Flux ×2) — önceki ~$0.13'ten düştü.
 """
@@ -35,7 +38,7 @@ import base64
 import colorsys
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
-from generators.logo_generator import select_logo_mono_png, select_logo_primary_png
+from generators.logo_generator import select_logo_mono_png, select_logo_primary_png, select_logo_tipo_png
 from generators.image_generator import generate_all_images  # fal.ai: icon + app görselleri
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
@@ -88,14 +91,16 @@ def generate_html_preview(brief: dict) -> tuple:
     studio_label = brief.get("studio_dna", {}).get("label", "")
     svgs = {
         "logo_primary": select_logo_primary_png(brief, studio_label=studio_label),
-        # studio_label buraya da geçiyor (3 Tem 2026) — ANA ve MONO/TİPO aynı
-        # markaya özgü fontu (tpl_X.ttf) kullansın, ikisi ayrı fonta düşmesin.
+        # studio_label buraya da geçiyor (3 Tem 2026) — ANA, MONO ve TİPO aynı
+        # markaya özgü fontu (tpl_X.ttf) kullansın, hiçbiri ayrı fonta düşmesin.
         "logo_mono":    select_logo_mono_png(brief, studio_label=studio_label),
+        # 3 Tem 2026: logo_tipo artık logo_mono'nun kopyası DEĞİL — önceden burada
+        # `svgs["logo_tipo"] = svgs["logo_mono"]` vardı, yani preview'da "TİPO" diye
+        # gösterilen görsel piksel piksel MONO ile aynıydı (bkz. logo_generator.py
+        # select_logo_tipo_png docstring'i — yapısal fark: RGB dolu zemin + primary_color
+        # wordmark + ortalı/tracking + accent nokta, hepsi MONO'da yok).
+        "logo_tipo":    select_logo_tipo_png(brief, studio_label=studio_label),
     }
-    # logo_tipo: ayrı bir diffusion çağrısı yerine mono'nun (şeffaf, tek renk) tekrar
-    # kullanımı — B4'teki "diffusion'dan exact-text custom lettering iste" görevi
-    # istatistiksel olarak en yüksek başarısızlık oranlıydı, karşılığı yoktu.
-    svgs["logo_tipo"] = svgs["logo_mono"]
 
     # fal.ai: sadece logo_icon (Recraft v3 — soyut geometrik, exact-text istemiyor),
     # app1, app2 (Flux JPEG)

@@ -36,6 +36,7 @@ from .logo_generator import (
     apply_watermark,
     select_logo_primary_png,
     select_logo_mono_png,
+    select_logo_tipo_png,
     hex_to_rgb,
 )
 from .image_generator import generate_all_images
@@ -179,6 +180,12 @@ def finalize_job(job_id: str) -> None:
       logo_reversed ← select_logo_mono_png'nin renk-ters-çevrilmiş hali (ayrı üretim yok)
       social_1/2    ← generate_all_images()["app1"/"app2"] (Flux) — kavram olarak
                       "sosyal medya görseli" korunuyor, üretim kaynağı değişti
+
+    3 Tem 2026: logo_tipo ZIP'e eklendi. Önceden preview'da (html_preview.py) TİPO
+    slotu gösteriliyordu ama finalize_job'ın ürettiği indirilebilir ZIP'te logo_tipo
+    dosyası HİÇ YOKTU — "Preview ≠ Download" sınıfı bir bug. select_logo_tipo_png
+    artık burada da çağrılıyor, ZIP'e ayrı dosya olarak ekleniyor (bkz. aşağıdaki
+    _add_img çağrısı).
     """
     try:
         db = get_db()
@@ -200,11 +207,15 @@ def finalize_job(job_id: str) -> None:
         # dosyanın başında düzeltilen "Preview ≠ İndirilen" sınıfı bir bug'ı, bu sefer
         # font üzerinden, sessizce geri getirirdik).
         logo_mono_uri     = select_logo_mono_png(brief, studio_label=studio_label)
+        # logo_tipo: preview'daki ile AYNI kaynak — select_logo_tipo_png artık MONO'nun
+        # kopyası değil (3 Tem 2026 fix), bu yüzden burada da ayrıca üretilmesi şart.
+        logo_tipo_uri     = select_logo_tipo_png(brief, studio_label=studio_label)
         fal_images        = generate_all_images(brief)
 
         logo_primary  = _datauri_to_pil_rgb(logo_primary_uri, bg_hex, size=(1600, 560))
         logo_icon     = _datauri_to_pil_rgb(fal_images.get("logo_icon", ""), bg_hex, size=(1024, 1024))
         logo_reversed = _invert_rgb(_datauri_to_pil_rgb(logo_mono_uri, bg_hex, size=(1600, 420)))
+        logo_tipo     = _datauri_to_pil_rgb(logo_tipo_uri, bg_hex, size=(1600, 520))
         social_1      = _datauri_to_pil_rgb(fal_images.get("app1", ""), bg_hex, size=(1024, 1024))
         social_2      = _datauri_to_pil_rgb(fal_images.get("app2", ""), bg_hex, size=(1024, 1024))
         card_front, card_back = generate_card_mockup(brief)
@@ -224,6 +235,7 @@ def finalize_job(job_id: str) -> None:
             _add_img(zf, logo_primary, f"{safe_name}_logo_primary.png", files_list)
             _add_img(zf, logo_icon, f"{safe_name}_logo_icon.png", files_list)
             _add_img(zf, logo_reversed, f"{safe_name}_logo_reversed.png", files_list)
+            _add_img(zf, logo_tipo, f"{safe_name}_logo_tipo.png", files_list)
 
             # Sosyal medya
             _add_img(zf, social_1, f"{safe_name}_social_post_1.png", files_list)
