@@ -530,7 +530,7 @@ _MARK_FNS = {
 _STUDIO_MARK_MAP = {
     "Collins":          "A",
     "Bureau Borsche":   "A",
-    "Sagmeister&Walsh": "C",
+    "Sagmeister & Walsh": "C",
     "Pentagram":        "D",
     "Landor":           "E",
     "Wolff Olins":      "B",
@@ -667,7 +667,7 @@ _LETTER_ICON_FNS = {
 _STUDIO_LETTER_ICON_MAP = {
     "Collins":          "A",   # negative block — negatif alan = Collins imzası
     "Bureau Borsche":   "B",   # diagonal cut — hız ve kültürel keskinlik
-    "Sagmeister&Walsh": "C",   # split — beklenmedik duality, kural kırma
+    "Sagmeister & Walsh": "C",   # split — beklenmedik duality, kural kırma
     "Pentagram":        "A",   # negative block — anlam yüklü negatif alan
     "Landor":           "A",   # negative block — temiz, güven veren, kurumsal derinlik
     "Wolff Olins":      "D",   # frame — sistemik, modüler çerçeve
@@ -754,10 +754,20 @@ def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
 # fonksiyon çağrılarını grep'lemek yetmiyor, module-level sabitleri de ayrı kontrol
 # etmek gerekiyor — statik syntax kontrolü (py_compile) bu tür hatayı yakalamaz,
 # sadece çalışma zamanında patlar.
+#
+# NOT (3 Tem 2026 hotfix #6): "Sagmeister & Walsh" anahtarı üç stüdyo sözlüğünde
+# de (_STUDIO_TEMPLATE_MAP, _STUDIO_MARK_MAP, _STUDIO_LETTER_ICON_MAP) boşluksuz
+# yazılmıştı ("Sagmeister&Walsh"), ama brand_brief.py'nin gerçek studio_dna
+# label'ı boşluklu ("Sagmeister & Walsh") — string eşitliği asla sağlanmadığı
+# için bu stüdyoya atanan HİÇBİR marka template C'ye (oversized initial), mark
+# C'ye (diamond) veya letter-icon C'ye (split) hiç ulaşamıyordu, sessizce
+# fallback'e düşüyordu. 3 farklı prompt'la (Rampa Skate/Meridyen Galeri/Hız
+# Rotası) yapılan canlı testte "hepsi B'ye düşüyor" bulgusunun bir kısmı bu
+# yüzdendi. Üç sözlükte de boşluklu hale getirildi.
 _STUDIO_TEMPLATE_MAP = {
     "Collins":          "A",
     "Bureau Borsche":   "D",
-    "Sagmeister&Walsh": "C",
+    "Sagmeister & Walsh": "C",
     "Pentagram":        "B",
     "Landor":           "B",
     "Wolff Olins":      "B",
@@ -804,19 +814,45 @@ def _resolve_template(brief: dict, studio_label: str = "") -> str:
     yazı" göründü. Kanıt: jobs tablosunda studio_label="Wolff Olins",
     energy_tier="playful", ama render B (renk bloksuz) çıktı.
 
-    Düzeltme: energy_tier artık İLK öncelik. energy_tier Sonnet'in HER marka için
-    özel ürettiği, doğrudan güvenilir bir sinyal (5 değer: bold/luxury/cinematic/
-    playful/minimal) — 7 sabit sektör-stüdyo eşlemesinden (ki kapsamadığı çok
-    kategori var) daha isabetli. studio_label artık sadece energy_tier tanınmazsa
-    (boşsa/5 değerin dışındaysa) devreye giren fallback.
+    Düzeltme (ilk hali): energy_tier'ı İLK öncelik yaptım — Pepito'yu (playful →
+    yanlışlıkla B) düzeltti. AMA aynı gün 3 farklı brief'le (Rampa Skate/bold,
+    Meridyen Galeri/kural-kıran, Hız Rotası/dinamik) test edince HEPSİ "cinematic"e
+    düştüğünü gördüm — hiçbiri A/C/D'ye ulaşamadı. Kanıt: brand_brief_contract.py
+    satır 128-129 Sonnet'in ham "energy" alanını zaten SADECE "playful" veya
+    "cinematic"e indirgiyor (`"playful" if "playful" in energy_raw else "cinematic"`
+    — 2 değerli bir kapı). 5-tier `_ENERGY_TIER_MAP` bu aynı 2 değerli alanı
+    keyword'lerle tarıyor; Sonnet hiç "bold"/"luxury"/"minimal" yazmadığı için o üç
+    tier PRATİKTE HİÇ TETİKLENMİYOR — energy_tier fiilen sadece "playful" ya da
+    "cinematic" olabiliyor. "cinematic" olduğunda önce onu kontrol etmek, aslında
+    zayıf/varsayılan bir sinyali 7 değerli (çok daha çeşitli) stüdyo eşlemesinin
+    ÖNÜNE koyup A/C/D'yi neredeyse ulaşılamaz kılıyordu.
+
+    Son düzeltme (bugünkü hâli): "playful" hâlâ güvenilir ve İLK sırada (Pepito
+    kanıtı geçerli — yanlış template'e düşen gerçek bir bug'dı). Ama "cinematic"
+    özel muamele görüyor: bu neredeyse her markanın ulaştığı bir DEFAULT olduğu
+    için, tek başına stüdyo eşlemesinin üzerine çıkmasına izin verilmiyor —
+    stüdyo etiketi (Collins/Bureau Borsche/Sagmeister&Walsh/Pentagram/Landor/
+    Wolff Olins/Base Design → A/D/C/B/B/B/E) önce denenir, o da yoksa ancak o
+    zaman "cinematic" → B'ye düşülür. Sonuç: playful markalar hâlâ doğru renk
+    bloğuna gidiyor, geri kalan her şey stüdyo çeşitliliğinden (5 template) pay
+    alıyor — hepsi B'de birikmiyor.
     (pil_params override'ı burada YOK — o sadece select_logo_primary_png'ye özel,
     tasarım direktörünün elle seçtiği bir override, mono/icon'a sızmıyor.)
     """
     energy = str(brief.get("energy_tier", brief.get("energy", "cinematic"))).lower()
 
-    tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
+    tpl = ""
+    if energy and energy != "cinematic":
+        # Güvenilir, ayrışan sinyal (bugün itibarıyla fiilen sadece "playful" bu
+        # koşulu tetikliyor — bkz. yukarıdaki not). Gelecekte bold/luxury/minimal
+        # gerçekten üretilmeye başlarsa onlar da buradan otomatik faydalanır.
+        tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
     if not tpl:
         tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
+    if not tpl:
+        # energy "cinematic" (varsayılan) VE studio_label eşleşmediyse — buraya
+        # düşer, cinematic→B ile sonuçlanır.
+        tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
     if not tpl:
         for kw, t in _ENERGY_TEMPLATE_MAP.items():
             if kw in energy:
@@ -900,7 +936,14 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
             rbb = d.textbbox((0, 0), rest, font=rf)
             rh = rbb[3] - rbb[1]
             ry = (H - rh) // 2 - int(H * 0.05)
-            d.text((rx, ry), rest, font=rf, fill=_pil_rgb(sc))
+            # NOT (3 Tem 2026 hotfix #7): "rest" metni körü körüne secondary_color
+            # ile çiziliyordu — bg de koyu, secondary_color de koyu olduğunda
+            # (örn. Meridyen Galeri: sc=#1A0A2E, bg=#0E0618) metin neredeyse görünmez
+            # oluyordu. sc, bg ile kontrast oluşturmuyorsa güvenli bir nötr renge düş.
+            rest_color = sc if _is_dark_hex(bg) != _is_dark_hex(sc) else (
+                "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+            )
+            d.text((rx, ry), rest, font=rf, fill=_pil_rgb(rest_color))
 
     elif tpl == "D":
         # Diagonal field — Bureau Borsche
