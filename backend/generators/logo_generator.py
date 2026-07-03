@@ -762,15 +762,31 @@ def _resolve_template(brief: dict, studio_label: str = "") -> str:
     şablon karar mekanizması (3 Tem 2026 font-per-marka eklenirken çıkarıldı).
     Önceden bu mantık sadece select_logo_primary_png içinde vardı — mono/icon
     hiç template hesaplamıyordu, bu yüzden hep aynı sabit fontu kullanıyorlardı.
-    Öncelik: stüdyo eşlemesi → energy_tier map → legacy energy keyword → default A.
+
+    3 Tem 2026 hotfix #4 (KÖK NEDEN BUG — Pepito testinde yakalandı):
+    Öncelik ESKİDEN stüdyo eşlemesi → energy_tier idi. Bu, sector detect_sector()
+    tarafından yanlış/hiç eşleşmeyince (bkz. brand_brief.py — 7 sektörden hiçbiri
+    "çocuk ürünü/oyuncak" içermiyor) rastgele/varsayılan bir studio_label'a
+    (örn. "Wolff Olins") düşen markaları, o studio'nun SABİT template'ine
+    (Wolff Olins → B, "dark statement" — salt wordmark + ince çubuk, RENK BLOĞU
+    YOK) kilitliyordu — brief'in kendi energy_tier'ı "playful" olsa bile. Sonuç:
+    Pepito (energy=playful, kırmızı/yeşil/krem palet) template B'ye düştü, "sadece
+    yazı" göründü. Kanıt: jobs tablosunda studio_label="Wolff Olins",
+    energy_tier="playful", ama render B (renk bloksuz) çıktı.
+
+    Düzeltme: energy_tier artık İLK öncelik. energy_tier Sonnet'in HER marka için
+    özel ürettiği, doğrudan güvenilir bir sinyal (5 değer: bold/luxury/cinematic/
+    playful/minimal) — 7 sabit sektör-stüdyo eşlemesinden (ki kapsamadığı çok
+    kategori var) daha isabetli. studio_label artık sadece energy_tier tanınmazsa
+    (boşsa/5 değerin dışındaysa) devreye giren fallback.
     (pil_params override'ı burada YOK — o sadece select_logo_primary_png'ye özel,
     tasarım direktörünün elle seçtiği bir override, mono/icon'a sızmıyor.)
     """
     energy = str(brief.get("energy_tier", brief.get("energy", "cinematic"))).lower()
 
-    tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
+    tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
     if not tpl:
-        tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
+        tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
     if not tpl:
         for kw, t in _ENERGY_TEMPLATE_MAP.items():
             if kw in energy:
