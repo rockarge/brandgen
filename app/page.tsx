@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Zap, Shield, Clock, X } from "lucide-react";
 import Pricing from "@/components/Pricing";
@@ -24,6 +24,25 @@ export default function Home() {
   const [packLoading, setPackLoading] = useState(false);
   const [packError, setPackError] = useState("");
   const [packSuccess, setPackSuccess] = useState<{ tier: string; balance: number } | null>(null);
+
+  // Gerçek sayaçlar — /api/stats (Supabase'ten canlı, 5 dk cache)
+  const [stats, setStats] = useState<{
+    generated: number | null;
+    freeRemaining: number | null;
+  }>({ generated: null, freeRemaining: null });
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((d) =>
+        setStats({
+          generated: typeof d.generated === "number" ? d.generated : null,
+          freeRemaining:
+            typeof d.freeRemaining === "number" ? d.freeRemaining : null,
+        })
+      )
+      .catch(() => {}); // sayaçlar kozmetik, hata sayfayı kırmasın
+  }, []);
 
   const handlePackLookup = async () => {
     if (!packEmail.includes("@")) {
@@ -169,7 +188,9 @@ export default function Home() {
         <div className="flex items-center gap-2 mb-8 px-4 py-2 rounded-full border border-brand-gold/30 bg-brand-gold/5">
           <Zap size={12} className="text-brand-gold" />
           <span className="text-xs font-mono text-brand-gold/80 tracking-widest uppercase">
-            Beta — İlk 200 üretim ücretsiz
+            {stats.freeRemaining !== null
+              ? `Beta — İlk 200 üretim ücretsiz · ${stats.freeRemaining} kaldı`
+              : "Beta — İlk 200 üretim ücretsiz"}
           </span>
         </div>
 
@@ -248,7 +269,9 @@ export default function Home() {
         <div className="mt-16 flex items-center gap-8 text-center">
           <div>
             <div className="text-2xl font-display font-black text-brand-offwhite">
-              1,247
+              {stats.generated !== null
+                ? stats.generated.toLocaleString("tr-TR")
+                : "···"}
             </div>
             <div className="text-xs font-mono text-white/30 mt-1">
               Marka üretildi
