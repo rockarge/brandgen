@@ -47,6 +47,13 @@ def extract_initials(brand_name: str) -> str:
     return "".join(w[0] for w in words[:3]).upper()
 
 
+def _tr_upper(s: str) -> str:
+    """Turkce-dogru buyuk harf: i->I noktali (Python .upper() i->I yapar; 20 Tem 2026
+    QA v2 bulgusu: 'Meridyen'->'MERIDYEN' yanlisti, 'MERIDYEN'.replace ile duzeltildi).
+    SADECE canli select_* yolunda kullanilir; legacy collage fonksiyonlarina dokunulmadi."""
+    return (s or "").replace("i", "\u0130").upper()
+
+
 def hex_to_rgb(hex_color: str) -> tuple:
     """#RRGGBB → (R, G, B)"""
     hex_color = hex_color.lstrip("#")
@@ -624,7 +631,7 @@ def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
         # 0.20'ye çıkarıldı, farklı fontların descender/line-gap farklarına pay bırakır.
         gap = max(20, int(fs * 0.20))
         ink_bottom = ink_top + nh
-        d.text((x, ink_bottom + gap), tag.upper()[:42], font=tf, fill=_pil_rgb(color))
+        d.text((x, ink_bottom + gap), _tr_upper(tag)[:42], font=tf, fill=_pil_rgb(color))
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -850,7 +857,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
 
     PNG data URI döner (SVG yok, browser font yok).
     """
-    name   = brief.get("brand_name", "BRAND").upper()
+    name   = _tr_upper(brief.get("brand_name", "BRAND"))
     pc     = brief.get("primary_color", "#C9A25A")
     sc     = brief.get("secondary_color", "#8B8B7A")
     ac     = brief.get("accent_color") or sc
@@ -896,9 +903,9 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         d.rectangle([88, bar_y, 88 + bar_w, bar_y + 10], fill=_pil_rgb(ac))
         if tag:
             tf = _pil_font("body", 28)
-            tw_bb = d.textbbox((0, 0), tag.upper()[:42], font=tf)
+            tw_bb = d.textbbox((0, 0), _tr_upper(tag)[:42], font=tf)
             tw = tw_bb[2] - tw_bb[0]
-            d.text((W - 88 - tw, bar_y + 10 + max(18, int(nh * 0.08))), tag.upper()[:42], font=tf, fill=_pil_rgb(sc))
+            d.text((W - 88 - tw, bar_y + 10 + max(18, int(nh * 0.08))), _tr_upper(tag)[:42], font=tf, fill=_pil_rgb(sc))
 
     elif tpl == "C":
         # Oversized initial — Sagmeister & Walsh
@@ -973,7 +980,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         if tag:
             ts = max(22, fs // 6)
             tf = _pil_font("body", ts)
-            tg = tag.upper()[:42]
+            tg = _tr_upper(tag)[:42]
             ttr = int(0.30 * ts)
             tag_w = _tracked_width(tg, tf, ttr)
             _draw_tracked(d, tg, tf, (W - tag_w) // 2, 34,
@@ -1011,7 +1018,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         if tag:
             ts = max(22, fs // 7)
             tf = _pil_font("body", ts)
-            tg = tag.upper()[:42]
+            tg = _tr_upper(tag)[:42]
             ttr = int(0.32 * ts)
             tag_w = _tracked_width(tg, tf, ttr)
             _draw_tracked(d, tg, tf, (W - tag_w) // 2, bot_y + 9 + int(H * 0.05),
@@ -1055,7 +1062,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         if tag:
             ts = max(20, fs // 6)
             tf = _pil_font("body", ts)
-            tg = tag.upper()[:42]
+            tg = _tr_upper(tag)[:42]
             ttr = int(0.30 * ts)
             tag_w = _tracked_width(tg, tf, ttr)
             _draw_tracked(d, tg, tf, (W - tag_w) // 2, ink_top + nh + int(fs * 0.24),
@@ -1083,7 +1090,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
             d.rectangle([div_x, int(H * 0.30), div_x + 2, int(H * 0.70)],
                         fill=_pil_rgb(_cguard(ac, bg)))
             ts = max(22, fs // 5)
-            tg = tag.upper()[:42]
+            tg = _tr_upper(tag)[:42]
             allowed = W - 100 - (div_x + 40)
             while ts > 18:
                 tf = _pil_font("body", ts)
@@ -1148,7 +1155,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         if tag:
             ts = max(22, fs // 6)
             tf = _pil_font("body", ts)
-            d.text((tag_x, tag_y), tag.upper()[:42], font=tf,
+            d.text((tag_x, tag_y), _tr_upper(tag)[:42], font=tf,
                    fill=_pil_rgb(_cguard(sc, bg)))
         _qa_flags(tpl, fs, name)
 
@@ -1179,7 +1186,7 @@ def select_logo_mono_png(brief: dict, studio_label: str = "") -> str:
       fontlarla çıkmasın diye şart: çağıran kod (html_preview.py, pipeline.py)
       select_logo_primary_png'ye verdiği AYNI studio_label'ı buraya da vermeli.
     """
-    name = brief.get("brand_name", "BRAND").upper()
+    name = _tr_upper(brief.get("brand_name", "BRAND"))
     bg   = brief.get("bg_color", "#0F0D0C")
     tc   = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
     tag  = brief.get("tagline", "")
@@ -1207,7 +1214,7 @@ def select_logo_mono_png(brief: dict, studio_label: str = "") -> str:
         # binme riski yaratıyordu. Doğrusu ink_top + nh (= ink_bottom).
         gap = max(20, int(fs * 0.20))
         ink_bottom = ink_top + nh
-        d.text((50, ink_bottom + gap), tag.upper()[:42], font=tf, fill=tc_rgba)
+        d.text((50, ink_bottom + gap), _tr_upper(tag)[:42], font=tf, fill=tc_rgba)
 
     return _png_uri(img)
 
@@ -1262,7 +1269,7 @@ def select_logo_tipo_png(brief: dict, studio_label: str = "") -> str:
 
     PNG data URI döner. Deterministik — diffusion yok, Türkçe karakter riski yok.
     """
-    name   = brief.get("brand_name", "BRAND").upper()
+    name   = _tr_upper(brief.get("brand_name", "BRAND"))
     pc     = brief.get("primary_color", "#C9A25A")
     sc     = brief.get("secondary_color", "#8B8B7A")
     ac     = brief.get("accent_color") or sc
@@ -1331,7 +1338,7 @@ def select_logo_tipo_png(brief: dict, studio_label: str = "") -> str:
     if tag:
         ts = max(22, fs // 6)
         tf = _pil_font("body", ts)
-        tag_text = tag.upper()[:42]
+        tag_text = _tr_upper(tag)[:42]
         tag_tracking = int(0.30 * ts)
         tag_w = _tracked_width(tag_text, tf, tag_tracking)
         tag_x = (W - tag_w) // 2

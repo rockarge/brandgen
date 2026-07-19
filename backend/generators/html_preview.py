@@ -102,12 +102,20 @@ def generate_html_preview(brief: dict) -> tuple:
         "logo_tipo":    select_logo_tipo_png(brief, studio_label=studio_label),
     }
 
-    # fal.ai: sadece logo_icon (Recraft v3 — soyut geometrik, exact-text istemiyor),
-    # app1, app2 (Flux JPEG)
+    # fal.ai: logo_icon (Recraft v3 — soyut geometrik, exact-text istemiyor),
+    # app1, app2 (Flux JPEG) + hero_dark/hero_light (Flux 9:16 — Görev 2B)
     fal_images = generate_all_images(brief, studio_label=studio_label)
     svgs["logo_icon"] = fal_images.get("logo_icon", "")
     svgs["app1"] = fal_images.get("app1", "")
     svgs["app2"] = fal_images.get("app2", "")
+
+    # Görev 2B (20 Tem 2026): genişletilmiş PIL asset'leri — TEK KAYNAK
+    # (asset_generator.py; finalize_job da AYNI fonksiyonu çağırır — "Preview ≠
+    # İndirilen" bug ailesi kapalı kalsın).
+    from generators.asset_generator import generate_extended_pil_assets
+    ext = generate_extended_pil_assets(
+        brief, studio_label=studio_label, mono_uri=svgs["logo_mono"]
+    )
 
     html_token_usage = {
         "input_tokens": 0,
@@ -224,6 +232,9 @@ def generate_html_preview(brief: dict) -> tuple:
                 "tipo":       svgs.get("logo_tipo", ""),
                 "icon":       svgs.get("logo_icon", ""),
                 "mono":       svgs.get("logo_mono", ""),
+                # Görev 2B: reversed — asset_generator'ın polarite-ters MONO'su
+                # (finalize_job ZIP'ine giren logo_reversed ile AYNI kaynak)
+                "reversed":   ext.get("logo_reversed", ""),
                 "inverse":    "",
                 "clearSpace": "Logo etrafında minimum 40px boşluk korunmalıdır.",
                 "misuse": [
@@ -249,9 +260,25 @@ def generate_html_preview(brief: dict) -> tuple:
                 "weNot":  voice_we_not,
             },
             "applications": [
-                {"img": svgs.get("app1", ""), "caption": "Sosyal Medya"},
-                {"img": svgs.get("app2", ""), "caption": "İçerik Şablonu"},
+                {"img": svgs.get("app1", ""), "caption": "Instagram Post A"},
+                {"img": svgs.get("app2", ""), "caption": "Instagram Post B"},
             ],
+            # Görev 2B (20 Tem 2026): genişletilmiş asset seti — WVC brand-kit
+            # paritesi (kartvizit, profil, highlight, banner, mobil hero).
+            "assets": {
+                "cardFront":     ext.get("card_front", ""),
+                "cardBack":      ext.get("card_back", ""),
+                "profileDark":   ext.get("profile_dark", ""),
+                "profileLight":  ext.get("profile_light", ""),
+                "highlights": [
+                    {"label": lbl, "img": ext.get(f"highlight_{i}", "")}
+                    for i, lbl in enumerate(ext.get("_highlight_labels", []), start=1)
+                ],
+                "bannerLinkedin": ext.get("banner_linkedin", ""),
+                "bannerTwitter":  ext.get("banner_twitter", ""),
+                "heroMobileDark":  fal_images.get("hero_dark", ""),
+                "heroMobileLight": fal_images.get("hero_light", ""),
+            },
             "credit": "Üretildi: BrandGen by Windy Venture Capital",
         }, ensure_ascii=False, indent=2)
         + ";"

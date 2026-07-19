@@ -55,6 +55,11 @@ DEFAULTS: dict[str, Any] = {
     "fal_icon_prompt":      "",   # logo_icon slot için Recraft prompt
     "fal_app1_prompt":      "",   # app1 slot için Flux prompt (İngilizce, isim+hex renk formatı)
     "fal_app2_prompt":      "",   # app2 slot için Flux prompt (İngilizce, isim+hex renk formatı)
+    "fal_hero_prompt":      "",   # mobil hero (9:16) için Flux prompt — Görev 2B (20 Tem 2026)
+
+    # Görev 2B (20 Tem 2026): IG highlight kapak etiketleri — Sonnet markaya özgü
+    # 4 etiket üretebilir; boşsa asset_generator._DEFAULT_HIGHLIGHTS kullanılır.
+    "highlight_labels":     [],
 
     # Strateji — brand_brief.py Sonnet üretimi
     "brand_story":          "",

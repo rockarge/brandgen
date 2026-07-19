@@ -391,6 +391,33 @@ window.BRAND = {
     border-color:var(--accent);
   }
 
+  /* ============================================================ */
+  /*  GENİŞLETİLMİŞ ASSETLER — Görev 2B (20 Tem 2026)              */
+  /* ============================================================ */
+  .asset-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .asset-card{background:var(--surface);border:1px solid var(--line);
+    border-radius:16px;overflow:hidden;transition:transform .5s var(--ease)}
+  .asset-card:hover{transform:translateY(-4px)}
+  .asset-card img{width:100%;display:block}
+  .asset-card .cap{padding:12px 16px;font-size:12px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--muted)}
+  body.energy-cinematic .asset-card{box-shadow:0 6px 28px rgba(0,0,0,.45)}
+  .hl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:18px;margin-top:8px}
+  .hl-item{text-align:center}
+  .hl-item img{width:100%;aspect-ratio:1;border-radius:50%;display:block;
+    border:1px solid var(--line)}
+  .hl-item .cap{margin-top:10px;font-size:11px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--muted)}
+  .hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:16px;max-width:560px}
+  .hero-phone{border-radius:26px;overflow:hidden;border:1px solid var(--line);
+    background:var(--surface)}
+  .hero-phone img{width:100%;aspect-ratio:9/16;object-fit:cover;display:block}
+  .asset-sub{font-size:13px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--muted);margin:44px 0 16px}
+  .asset-sub:first-of-type{margin-top:8px}
+
   /* Geometric accent line — bölümler arası cinematic ruler */
   .geo-rule{
     max-width:var(--maxw);margin:0 auto;padding:0 24px;
@@ -528,7 +555,8 @@ window.BRAND = {
     var L=B.logo; if(!L) return;
     var variants=[
       {k:"primary",lbl:"Ana"},{k:"tipo",lbl:"Tipo"},
-      {k:"icon",lbl:"İkon"},{k:"mono",lbl:"Mono"}
+      {k:"icon",lbl:"İkon"},{k:"mono",lbl:"Mono"},
+      {k:"reversed",lbl:"Ters"} /* Görev 2B — polarite-ters varyant */
     ];
     var any = variants.some(function(v){return has(L[v.k]);});
     var sec=el("section","reveal");
@@ -664,6 +692,92 @@ window.BRAND = {
       grid.appendChild(card);
     });
     sec.appendChild(grid);
+    app.appendChild(sec);
+  })();
+
+  /* ---------- 8B. STÜDYO ÇIKTILARI — Görev 2B (20 Tem 2026) ----------
+     Kartvizit / profil / highlight / banner / mobil hero.
+     window.BRAND.assets yoksa (eski job'lar) bölüm hiç render edilmez. */
+  (function(){
+    var A=B.assets; if(!A) return;
+    var hls=(A.highlights||[]).filter(function(h){return h && has(h.img);});
+    var anyAsset = has(A.cardFront)||has(A.cardBack)||has(A.profileDark)||
+      has(A.profileLight)||hls.length>0||has(A.bannerLinkedin)||
+      has(A.bannerTwitter)||has(A.heroMobileDark)||has(A.heroMobileLight);
+    if(!anyAsset) return;
+
+    if(!PLAYFUL){
+      var ruler=el("div","geo-rule reveal");
+      ruler.appendChild(el("span","geo-label","Stüdyo"));
+      app.appendChild(ruler);
+    }
+    var sec=el("section","reveal");
+    sec.appendChild(el("div","eyebrow","Stüdyo Çıktıları"));
+    sec.appendChild(el("h2","sec-title","Kullanıma Hazır"));
+
+    function card(src,cap){
+      var c=el("div","asset-card");
+      var img=el("img"); img.src=src; img.alt=cap; img.loading="lazy";
+      c.appendChild(img); c.appendChild(el("div","cap",esc(cap)));
+      return c;
+    }
+    function sub(t){ sec.appendChild(el("div","asset-sub",esc(t))); }
+
+    // Kartvizit — 300dpi print-ready
+    if(has(A.cardFront)||has(A.cardBack)){
+      sub("Kartvizit — 300dpi Print-Ready");
+      var g1=el("div","asset-grid");
+      if(has(A.cardFront)) g1.appendChild(card(A.cardFront,"Ön Yüz"));
+      if(has(A.cardBack))  g1.appendChild(card(A.cardBack,"Arka Yüz"));
+      sec.appendChild(g1);
+    }
+
+    // Profil fotoğrafı — 1080×1080
+    if(has(A.profileDark)||has(A.profileLight)){
+      sub("Profil Fotoğrafı — 1080×1080");
+      var g2=el("div","asset-grid");
+      if(has(A.profileDark))  g2.appendChild(card(A.profileDark,"Koyu"));
+      if(has(A.profileLight)) g2.appendChild(card(A.profileLight,"Açık"));
+      sec.appendChild(g2);
+    }
+
+    // Instagram highlight kapakları
+    if(hls.length>0){
+      sub("Instagram Highlight Kapakları");
+      var g3=el("div","hl-grid");
+      hls.forEach(function(h){
+        var it=el("div","hl-item");
+        var img=el("img"); img.src=h.img; img.alt=h.label||""; img.loading="lazy";
+        it.appendChild(img);
+        if(has(h.label)) it.appendChild(el("div","cap",esc(h.label)));
+        g3.appendChild(it);
+      });
+      sec.appendChild(g3);
+    }
+
+    // Sosyal medya bannerları
+    if(has(A.bannerLinkedin)||has(A.bannerTwitter)){
+      sub("Sosyal Medya Bannerları");
+      var g4=el("div","asset-grid"); g4.style.gridTemplateColumns="1fr";
+      if(has(A.bannerLinkedin)) g4.appendChild(card(A.bannerLinkedin,"LinkedIn Banner — 1584×396"));
+      if(has(A.bannerTwitter))  g4.appendChild(card(A.bannerTwitter,"X / Twitter Header — 1500×500"));
+      sec.appendChild(g4);
+    }
+
+    // Mobil hero — 1080×1920
+    if(has(A.heroMobileDark)||has(A.heroMobileLight)){
+      sub("Mobil Hero — 1080×1920");
+      var g5=el("div","hero-grid");
+      function phone(src,cap){
+        var p=el("div","hero-phone");
+        var img=el("img"); img.src=src; img.alt=cap; img.loading="lazy";
+        p.appendChild(img); return p;
+      }
+      if(has(A.heroMobileDark))  g5.appendChild(phone(A.heroMobileDark,"Koyu"));
+      if(has(A.heroMobileLight)) g5.appendChild(phone(A.heroMobileLight,"Açık"));
+      sec.appendChild(g5);
+    }
+
     app.appendChild(sec);
   })();
 

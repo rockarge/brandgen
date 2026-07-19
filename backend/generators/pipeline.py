@@ -212,13 +212,23 @@ def finalize_job(job_id: str) -> None:
         logo_tipo_uri     = select_logo_tipo_png(brief, studio_label=studio_label)
         fal_images        = generate_all_images(brief, studio_label=studio_label)
 
+        # Görev 2B (20 Tem 2026): genişletilmiş asset'ler — html_preview ile AYNI
+        # tek kaynak (asset_generator.generate_extended_pil_assets). Kartvizit de
+        # artık buradan geliyor (template-aware v2); legacy generate_card_mockup
+        # sadece ödeme-öncesi collage thumbnail'inde kaldı (kapsam dışı, dokunulmadı).
+        # logo_reversed da artık kanal-inversiyon değil, polarite-ters MONO —
+        # preview'daki "Ters" hücresiyle birebir aynı.
+        from .asset_generator import generate_extended_pil_assets
+        ext = generate_extended_pil_assets(brief, studio_label=studio_label, mono_uri=logo_mono_uri)
+
         logo_primary  = _datauri_to_pil_rgb(logo_primary_uri, bg_hex, size=(1600, 560))
         logo_icon     = _datauri_to_pil_rgb(fal_images.get("logo_icon", ""), bg_hex, size=(1024, 1024))
-        logo_reversed = _invert_rgb(_datauri_to_pil_rgb(logo_mono_uri, bg_hex, size=(1600, 420)))
+        logo_reversed = _datauri_to_pil_rgb(ext.get("logo_reversed", ""), bg_hex, size=(1600, 420))
         logo_tipo     = _datauri_to_pil_rgb(logo_tipo_uri, bg_hex, size=(1600, 520))
         social_1      = _datauri_to_pil_rgb(fal_images.get("app1", ""), bg_hex, size=(1024, 1024))
         social_2      = _datauri_to_pil_rgb(fal_images.get("app2", ""), bg_hex, size=(1024, 1024))
-        card_front, card_back = generate_card_mockup(brief)
+        card_front = _datauri_to_pil_rgb(ext.get("card_front", ""), bg_hex, size=(1050, 600))
+        card_back  = _datauri_to_pil_rgb(ext.get("card_back", ""), bg_hex, size=(1050, 600))
 
         # PDF (watermarksız)
         pdf_bytes = generate_brand_kit_pdf(
@@ -244,6 +254,31 @@ def finalize_job(job_id: str) -> None:
             # Kartvizit
             _add_img(zf, card_front, f"{safe_name}_card_front.png", files_list)
             _add_img(zf, card_back, f"{safe_name}_card_back.png", files_list)
+
+            # Görev 2B — genişletilmiş asset seti (preview kit sayfasıyla aynı kaynak)
+            _ext_zip = [
+                ("profile_dark",    f"{safe_name}_profile_dark.png",    (1080, 1080)),
+                ("profile_light",   f"{safe_name}_profile_light.png",   (1080, 1080)),
+                ("highlight_1",     f"{safe_name}_highlight_1.png",     (1080, 1080)),
+                ("highlight_2",     f"{safe_name}_highlight_2.png",     (1080, 1080)),
+                ("highlight_3",     f"{safe_name}_highlight_3.png",     (1080, 1080)),
+                ("highlight_4",     f"{safe_name}_highlight_4.png",     (1080, 1080)),
+                ("banner_linkedin", f"{safe_name}_banner_linkedin.png", (1584, 396)),
+                ("banner_twitter",  f"{safe_name}_banner_twitter.png",  (1500, 500)),
+            ]
+            for key, fname, sz in _ext_zip:
+                uri = ext.get(key, "")
+                if uri:
+                    _add_img(zf, _datauri_to_pil_rgb(uri, bg_hex, size=sz), fname, files_list)
+
+            # Mobil hero (fal.ai) — boş slot ZIP'e girmez (kit'te de gizleniyor)
+            for key, fname in (
+                ("hero_dark",  f"{safe_name}_hero_mobile_dark.png"),
+                ("hero_light", f"{safe_name}_hero_mobile_light.png"),
+            ):
+                uri = fal_images.get(key, "")
+                if uri:
+                    _add_img(zf, _datauri_to_pil_rgb(uri, bg_hex, size=(1080, 1920)), fname, files_list)
 
             # PDF
             zf.writestr(f"{safe_name}_brand_kit.pdf", pdf_bytes)

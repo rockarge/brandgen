@@ -189,6 +189,40 @@ def _app2_prompt(brief: dict) -> str:
     ).strip()
 
 
+def _hero_prompt(brief: dict, dark: bool) -> str:
+    """Mobil hero (1080×1920, 9:16) — foto-gerçekçi, fal.ai (Görev 2B).
+    dark/light iki varyant: WVC brand-kit paritesindeki 'Mobile Hero Dark/Light'.
+    Sonnet fal_hero_prompt üretirse o kullanılır, varyant notu eklenir."""
+    base = brief.get("fal_hero_prompt", "").strip()
+    variant = (
+        "Dark moody variant, deep shadows, dominant dark background."
+        if dark else
+        "Light airy variant, bright soft background, high-key lighting."
+    )
+    if base and len(base) > 30:
+        return f"{base} Vertical 9:16 mobile hero format. {variant} NO text. NO logo."
+
+    name    = _ascii_safe(brief.get("brand_name", "BRAND"))
+    primary = brief.get("primary_color", "#333333")
+    bg      = brief.get("bg_color", "#111111")
+    energy  = brief.get("energy", "cinematic")
+    sector  = brief.get("studio_dna", {}).get("sector", brief.get("sector", ""))
+    mood    = ", ".join(brief.get("mood_words", [])[:3])
+
+    if energy == "playful":
+        style = "Bold flat illustration, bright saturated colors, joyful energy."
+    else:
+        style = "Cinematic editorial photography, premium atmospheric depth."
+    return (
+        f'Vertical mobile app hero background for "{name}"'
+        f'{(" — " + sector) if sector else ""}. '
+        f'{mood + ". " if mood else ""}'
+        f'Accent color {_color_note(primary)} against {_color_note(bg)} tones. '
+        f'{style} {variant} '
+        f'9:16 portrait format. NO text. NO logo. NO watermark. High quality.'
+    ).strip()
+
+
 # ── fal.ai çağrıları ──────────────────────────────────────────────────────────
 
 def _bytes_to_data_uri(content: bytes, mime: str = "image/png") -> str:
@@ -292,15 +326,16 @@ async def _recraft_icon(prompt: str) -> str:
         return ""
 
 
-async def _flux_app(prompt: str) -> str:
-    """Flux Schnell ile editorial uygulama görseli üret. Döner: data:image/png;base64,... veya ""."""
+async def _flux_app(prompt: str, image_size: str = "square_hd") -> str:
+    """Flux Schnell ile editorial uygulama görseli üret. Döner: data:image/png;base64,... veya "".
+    image_size: "square_hd" (1024×1024) | "portrait_16_9" (9:16 — mobil hero, 2B)."""
     try:
         result = await asyncio.to_thread(
             fal_client.run,
             "fal-ai/flux/schnell",
             arguments={
                 "prompt": prompt,
-                "image_size": "square_hd",        # 1024×1024
+                "image_size": image_size,
                 "num_inference_steps": 4,
                 "num_images": 1,
                 "enable_safety_checker": True,
@@ -352,11 +387,16 @@ def generate_all_images(brief: dict, studio_label: str = "") -> dict:
             _recraft_icon(_logo_icon_prompt(brief, tpl)),
             _flux_app(_app1_prompt(brief)),
             _flux_app(_app2_prompt(brief)),
+            # Görev 2B (20 Tem 2026): mobil hero dark/light — WVC brand-kit
+            # paritesi. Flux Schnell ×2, ~+$0.006/üretim. Hatalı slot "" döner,
+            # kit o hücreyi gizler (mevcut kural).
+            _flux_app(_hero_prompt(brief, dark=True), image_size="portrait_16_9"),
+            _flux_app(_hero_prompt(brief, dark=False), image_size="portrait_16_9"),
             return_exceptions=True,
         )
 
     results = asyncio.run(_run())
-    keys = ["logo_icon", "app1", "app2"]
+    keys = ["logo_icon", "app1", "app2", "hero_dark", "hero_light"]
     return {
         k: (r if isinstance(r, str) else "")
         for k, r in zip(keys, results)
