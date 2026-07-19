@@ -861,7 +861,15 @@ def generate_extended_pil_assets(brief: dict, studio_label: str = "",
     _safe("profile_light", _profile, brief, studio_label, False)
 
     labels = [str(l).strip() for l in (brief.get("highlight_labels") or []) if str(l).strip()]
-    labels = [l[:12] for l in labels]  # daire güvenli alanı için üst sınır
+    # Daire güvenli alanı için üst sınır — KELİME GÜVENLİ kısaltma (canlı test
+    # bulgusu, 20 Tem: sert [:12] "BUGÜNÜN EKMEK"i "BUGÜNÜN EKME" yapıyordu).
+    # Uzun etiketten ilk kelime alınır; tek kelime de uzunsa ancak o zaman kesilir.
+    def _fit_label(l: str) -> str:
+        if len(l) <= 12:
+            return l
+        first = l.split()[0]
+        return first if len(first) <= 12 else first[:12]
+    labels = [_fit_label(l) for l in labels]
     labels = (labels + _DEFAULT_HIGHLIGHTS)[:4]
     for i, lbl in enumerate(labels, start=1):
         _safe(f"highlight_{i}", _highlight, brief, studio_label, lbl)
