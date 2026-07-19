@@ -210,7 +210,7 @@ def finalize_job(job_id: str) -> None:
         # logo_tipo: preview'daki ile AYNI kaynak — select_logo_tipo_png artık MONO'nun
         # kopyası değil (3 Tem 2026 fix), bu yüzden burada da ayrıca üretilmesi şart.
         logo_tipo_uri     = select_logo_tipo_png(brief, studio_label=studio_label)
-        fal_images        = generate_all_images(brief)
+        fal_images        = generate_all_images(brief, studio_label=studio_label)
 
         logo_primary  = _datauri_to_pil_rgb(logo_primary_uri, bg_hex, size=(1600, 560))
         logo_icon     = _datauri_to_pil_rgb(fal_images.get("logo_icon", ""), bg_hex, size=(1024, 1024))

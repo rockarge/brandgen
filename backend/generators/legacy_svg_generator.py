@@ -610,3 +610,160 @@ def generate_card_front_svg(
   <rect x="1030" y="480" width="1" height="60" fill="{acc}" opacity="0.5"/>
 </svg>"""
     return _svg_data_uri(svg)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  ARŞİV — 4 TEMMUZ 2026 (2. tur ölü kod temizliği)
+#  logo_generator.py'den taşındı. Kapsam farklı: yukarıdaki (2 Tem) SVG template
+#  sistemiydi; bu bölüm PIL v2'nin İLK "geometrik mark" denemesi (letter-icon
+#  sistemine — _pil_icon_negative/diagonal/split/frame, _LETTER_ICON_FNS —
+#  geçilmeden önceki hali). grep ile doğrulandı: _MARK_FNS, _mark_slash/_arc/
+#  _diamond/_bars/_plus, _STUDIO_MARK_MAP, _ENERGY_MARK_MAP, _bebas_size —
+#  backend/ altında hiçbir dosyadan (pipeline.py, html_preview.py dahil) import
+#  veya çağrı yok. select_logo_icon_png() bunların yerine _LETTER_ICON_FNS'i
+#  kullanıyor (logo_generator.py'de kaldı, CANLI).
+#  SİLİNMEDİ, TAŞINDI — geri lazım olursa burada duruyor.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _bebas_size(char_count: int, avail_w: int, max_s: int = 220, min_s: int = 28) -> int:
+    """
+    ESKİ — sadece Bebas Neue'ye özel kalibrasyon (her karakter ≈ size×0.50px,
+    condensed font varsayımı). 3 Tem 2026 hotfix #5'te yerini `_fit_font_size()`e
+    bıraktı — artık kod tabanında hiçbir yerden ÇAĞRILMIYOR, referans için duruyor.
+    Kök neden: Bodoni Moda/Archivo Black gibi geniş fontlarda bu formül gerçek
+    glyph genişliğinden çok küçük tahmin ediyordu → hesaplanan font boyutu olması
+    gerekenden büyük çıkıyordu → wordmark 1600px canvas'ı taşıyordu (Noir Atelier
+    testinde "ANA/TİPO/MONO alana sığmıyor" diye yakalandı).
+    """
+    return max(min_s, min(max_s, int(avail_w / max(char_count, 1) / 0.50)))
+
+
+def _mark_slash(pc: str, ac: str, bg: str, S: int = 640):
+    """
+    Mark A: Üç diyagonal şerit — hız / enerji / ivme.
+    Bureau Borsche / Collins / bold energy DNA.
+    """
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (S, S), _pil_rgb_local(bg))
+    d = ImageDraw.Draw(img)
+    y0, y1 = int(S * 0.07), int(S * 0.93)
+    shift = int(S * 0.34)
+    strips = [
+        (int(S * 0.10), int(S * 0.10), ac),
+        (int(S * 0.26), int(S * 0.17), pc),
+        (int(S * 0.50), int(S * 0.13), pc),
+    ]
+    for bx, bw, col in strips:
+        d.polygon([
+            (bx,              y1),
+            (bx + bw,         y1),
+            (bx + bw + shift, y0),
+            (bx + shift,      y0),
+        ], fill=_pil_rgb_local(col))
+    return img
+
+
+def _mark_arc(pc: str, ac: str, bg: str, S: int = 640):
+    """Mark B: Hedef halkası + sağ üst accent dilimi. Pentagram / Wolff Olins / premium DNA."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (S, S), _pil_rgb_local(bg))
+    d = ImageDraw.Draw(img)
+    cx = cy = S // 2
+    OR = int(S * 0.41)
+    IR = int(S * 0.25)
+    d.ellipse([cx - OR, cy - OR, cx + OR, cy + OR], fill=_pil_rgb_local(pc))
+    d.ellipse([cx - IR, cy - IR, cx + IR, cy + IR], fill=_pil_rgb_local(bg))
+    d.pieslice([cx - OR, cy - OR, cx + OR, cy + OR], start=270, end=360, fill=_pil_rgb_local(ac))
+    d.ellipse([cx - IR, cy - IR, cx + IR, cy + IR], fill=_pil_rgb_local(bg))
+    DR = int(S * 0.065)
+    d.ellipse([cx - DR, cy - DR, cx + DR, cy + DR], fill=_pil_rgb_local(ac))
+    return img
+
+
+def _mark_diamond(pc: str, ac: str, bg: str, S: int = 640):
+    """Mark C: Eşkenar dörtgen, dikey iki renkli bölünmüş. Sagmeister & Walsh / dynamic DNA."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (S, S), _pil_rgb_local(bg))
+    d = ImageDraw.Draw(img)
+    m = int(S * 0.09)
+    cx = cy = S // 2
+    d.polygon([(cx, m), (S - m, cy), (cx, S - m), (m, cy)], fill=_pil_rgb_local(pc))
+    d.polygon([(cx, m), (S - m, cy), (cx, S - m)], fill=_pil_rgb_local(ac))
+    lw = max(3, S // 100)
+    d.line([(cx, m), (cx, S - m)], fill=_pil_rgb_local(bg), width=lw)
+    return img
+
+
+def _mark_bars(pc: str, ac: str, bg: str, S: int = 640):
+    """Mark D: Üç yatay bar, azalan genişlik. Base Design / Pentagram / editorial DNA."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (S, S), _pil_rgb_local(bg))
+    d = ImageDraw.Draw(img)
+    x0 = int(S * 0.125)
+    bh = int(S * 0.135)
+    gap = int(S * 0.065)
+    total_h = 3 * bh + 2 * gap
+    y0 = (S - total_h) // 2
+    fw = S - 2 * x0
+    for i, (frac, col) in enumerate([(1.0, ac), (0.72, pc), (0.46, pc)]):
+        y = y0 + i * (bh + gap)
+        w = int(fw * frac)
+        d.rectangle([x0, y, x0 + w, y + bh], fill=_pil_rgb_local(col))
+    return img
+
+
+def _mark_plus(pc: str, ac: str, bg: str, S: int = 640):
+    """Mark E: Kalın artı — Landor / architectural / corporate DNA."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (S, S), _pil_rgb_local(bg))
+    d = ImageDraw.Draw(img)
+    m = int(S * 0.12)
+    arm = int(S * 0.22)
+    cx = cy = S // 2
+    d.rectangle([cx - arm // 2, m, cx + arm // 2, S - m], fill=_pil_rgb_local(ac))
+    d.rectangle([m, cy - arm // 2, S - m, cy + arm // 2], fill=_pil_rgb_local(pc))
+    return img
+
+
+def _pil_rgb_local(h: str) -> tuple:
+    """Arşiv kopyası — orijinalde logo_generator.py'deki _pil_rgb()'ye bağımlıydı."""
+    try:
+        h2 = h.lstrip("#")
+        if len(h2) == 3:
+            h2 = h2[0]*2 + h2[1]*2 + h2[2]*2
+        return (int(h2[0:2], 16), int(h2[2:4], 16), int(h2[4:6], 16))
+    except Exception:
+        return (128, 128, 128)
+
+
+_MARK_FNS = {
+    "A": _mark_slash,
+    "B": _mark_arc,
+    "C": _mark_diamond,
+    "D": _mark_bars,
+    "E": _mark_plus,
+}
+
+_STUDIO_MARK_MAP = {
+    "Collins":          "A",
+    "Bureau Borsche":   "A",
+    "Sagmeister & Walsh": "C",
+    "Pentagram":        "D",
+    "Landor":           "E",
+    "Wolff Olins":      "B",
+    "Base Design":      "D",
+}
+
+_ENERGY_MARK_MAP = {
+    "bold":      "A",
+    "urgent":    "A",
+    "energetic": "A",
+    "dynamic":   "C",
+    "playful":   "C",
+    "cinematic": "B",
+    "premium":   "B",
+    "luxury":    "B",
+    "editorial": "D",
+    "corporate": "D",
+    "minimal":   "E",
+}

@@ -366,6 +366,25 @@ def _pil_font(name: str = "display", size: int = 80) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
+# ── TEMPLATE v2 FONT ALIAS (20 Tem 2026 — Görev 2A) ──────────────────────────
+# Yeni template'ler (F-J) YENİ font dosyası gerektirmez — mevcut 5 curated fontu
+# (tpl_A..E.ttf) alias'la yeniden kullanır. Kural: sistem hiçbir yerden kendi
+# kendine font indirmez (bkz. _PIL_FONT_URLS notu). Serhat ileride yeni .ttf
+# koyarsa alias'ı gerçek dosyaya çevirmek yeterli.
+_TPL_FONT_ALIAS = {
+    "F": "D",   # retro-fütürist echo   → Archivo Black (geniş, ağır)
+    "G": "B",   # editorial masthead    → Bodoni Moda (serif, editoryal)
+    "H": "E",   # linework badge        → Space Grotesk (teknik, temiz)
+    "I": "E",   # classic corporate     → Space Grotesk (nötr, güvenilir)
+    "J": "C",   # playful stack         → Fredoka (yumuşak, oyuncu)
+}
+
+
+def _tpl_font_name(tpl: str) -> str:
+    """Template kodu → gerçek font dosya adı (alias çözümü)."""
+    return f"tpl_{_TPL_FONT_ALIAS.get(tpl, tpl)}"
+
+
 def _png_uri(img: Image.Image) -> str:
     """PIL Image → data:image/png;base64,... URI"""
     buf = _io.BytesIO()
@@ -382,19 +401,6 @@ def _pil_rgb(h: str) -> tuple:
         return (int(h2[0:2], 16), int(h2[2:4], 16), int(h2[4:6], 16))
     except Exception:
         return (128, 128, 128)
-
-
-def _bebas_size(char_count: int, avail_w: int, max_s: int = 220, min_s: int = 28) -> int:
-    """
-    ESKİ — sadece Bebas Neue'ye özel kalibrasyon (her karakter ≈ size×0.50px,
-    condensed font varsayımı). 3 Tem 2026 hotfix #5'te yerini `_fit_font_size()`e
-    bıraktı (bkz. altı) — artık kod tabanında hiçbir yerden ÇAĞRILMIYOR, referans
-    için duruyor. Kök neden: Bodoni Moda/Archivo Black gibi geniş fontlarda bu
-    formül gerçek glyph genişliğinden çok küçük tahmin ediyordu → hesaplanan font
-    boyutu olması gerekenden büyük çıkıyordu → wordmark 1600px canvas'ı taşıyordu
-    (Noir Atelier testinde "ANA/TİPO/MONO alana sığmıyor" diye yakalandı).
-    """
-    return max(min_s, min(max_s, int(avail_w / max(char_count, 1) / 0.50)))
 
 
 def _fit_font_size(text: str, font_name: str, avail_w: int, max_s: int = 220, min_s: int = 28) -> int:
@@ -422,137 +428,12 @@ def _fit_font_size(text: str, font_name: str, avail_w: int, max_s: int = 220, mi
     return max(min_s, min(max_s, size))
 
 
-# ── GEOMETRIK MARKLAR — sıfır typography, salt form ─────────────────────────
-
-def _mark_slash(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
-    """
-    Mark A: Üç diyagonal şerit — hız / enerji / ivme.
-    Bureau Borsche / Collins / bold energy DNA.
-    """
-    img = Image.new("RGB", (S, S), _pil_rgb(bg))
-    d = ImageDraw.Draw(img)
-    y0, y1 = int(S * 0.07), int(S * 0.93)
-    shift = int(S * 0.34)
-    strips = [
-        (int(S * 0.10), int(S * 0.10), ac),
-        (int(S * 0.26), int(S * 0.17), pc),
-        (int(S * 0.50), int(S * 0.13), pc),
-    ]
-    for bx, bw, col in strips:
-        d.polygon([
-            (bx,              y1),
-            (bx + bw,         y1),
-            (bx + bw + shift, y0),
-            (bx + shift,      y0),
-        ], fill=_pil_rgb(col))
-    return img
-
-
-def _mark_arc(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
-    """
-    Mark B: Hedef halkası + sağ üst accent dilimi.
-    Pentagram / Wolff Olins / premium DNA.
-    """
-    img = Image.new("RGB", (S, S), _pil_rgb(bg))
-    d = ImageDraw.Draw(img)
-    cx = cy = S // 2
-    OR = int(S * 0.41)
-    IR = int(S * 0.25)
-    d.ellipse([cx - OR, cy - OR, cx + OR, cy + OR], fill=_pil_rgb(pc))
-    d.ellipse([cx - IR, cy - IR, cx + IR, cy + IR], fill=_pil_rgb(bg))
-    # Sağ üst çeyrek accent (PIL: 270°=üst, 360°=sağ, clockwise)
-    d.pieslice([cx - OR, cy - OR, cx + OR, cy + OR], start=270, end=360, fill=_pil_rgb(ac))
-    d.ellipse([cx - IR, cy - IR, cx + IR, cy + IR], fill=_pil_rgb(bg))
-    DR = int(S * 0.065)
-    d.ellipse([cx - DR, cy - DR, cx + DR, cy + DR], fill=_pil_rgb(ac))
-    return img
-
-
-def _mark_diamond(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
-    """
-    Mark C: Eşkenar dörtgen, dikey iki renkli bölünmüş.
-    Sagmeister & Walsh / dynamic DNA.
-    """
-    img = Image.new("RGB", (S, S), _pil_rgb(bg))
-    d = ImageDraw.Draw(img)
-    m = int(S * 0.09)
-    cx = cy = S // 2
-    d.polygon([(cx, m), (S - m, cy), (cx, S - m), (m, cy)], fill=_pil_rgb(pc))
-    d.polygon([(cx, m), (S - m, cy), (cx, S - m)], fill=_pil_rgb(ac))
-    lw = max(3, S // 100)
-    d.line([(cx, m), (cx, S - m)], fill=_pil_rgb(bg), width=lw)
-    return img
-
-
-def _mark_bars(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
-    """
-    Mark D: Üç yatay bar, azalan genişlik.
-    Base Design / Pentagram / editorial DNA.
-    """
-    img = Image.new("RGB", (S, S), _pil_rgb(bg))
-    d = ImageDraw.Draw(img)
-    x0 = int(S * 0.125)
-    bh = int(S * 0.135)
-    gap = int(S * 0.065)
-    total_h = 3 * bh + 2 * gap
-    y0 = (S - total_h) // 2
-    fw = S - 2 * x0
-    for i, (frac, col) in enumerate([(1.0, ac), (0.72, pc), (0.46, pc)]):
-        y = y0 + i * (bh + gap)
-        w = int(fw * frac)
-        d.rectangle([x0, y, x0 + w, y + bh], fill=_pil_rgb(col))
-    return img
-
-
-def _mark_plus(pc: str, ac: str, bg: str, S: int = 640) -> Image.Image:
-    """
-    Mark E: Kalın artı — Landor / architectural / corporate DNA.
-    Yatay kol primary, dikey kol accent.
-    """
-    img = Image.new("RGB", (S, S), _pil_rgb(bg))
-    d = ImageDraw.Draw(img)
-    m = int(S * 0.12)
-    arm = int(S * 0.22)
-    cx = cy = S // 2
-    d.rectangle([cx - arm // 2, m, cx + arm // 2, S - m], fill=_pil_rgb(ac))
-    d.rectangle([m, cy - arm // 2, S - m, cy + arm // 2], fill=_pil_rgb(pc))
-    return img
-
-
-_MARK_FNS = {
-    "A": _mark_slash,
-    "B": _mark_arc,
-    "C": _mark_diamond,
-    "D": _mark_bars,
-    "E": _mark_plus,
-}
-
-_STUDIO_MARK_MAP = {
-    "Collins":          "A",
-    "Bureau Borsche":   "A",
-    "Sagmeister & Walsh": "C",
-    "Pentagram":        "D",
-    "Landor":           "E",
-    "Wolff Olins":      "B",
-    "Base Design":      "D",
-}
-
-_ENERGY_MARK_MAP = {
-    "bold":      "A",
-    "urgent":    "A",
-    "energetic": "A",
-    "dynamic":   "C",
-    "playful":   "C",
-    "cinematic": "B",
-    "premium":   "B",
-    "luxury":    "B",
-    "editorial": "D",
-    "corporate": "D",
-    "minimal":   "E",
-}
-
-
 # ── HARF TABANLI PIL İKONLAR ──────────────────────────────────────────────────
+# (Not: bu bölümden önce eskiden "geometrik marklar" — _mark_slash/_arc/_diamond/
+#  _bars/_plus, _MARK_FNS, _STUDIO_MARK_MAP, _ENERGY_MARK_MAP — vardı. Letter-icon
+#  sistemi bunların yerini aldı (select_logo_icon_png artık _LETTER_ICON_FNS
+#  kullanıyor). Hiçbir yerden çağrılmadığı grep ile doğrulandı, 4 Tem 2026'da
+#  legacy_svg_generator.py'ye taşındı — bkz. o dosyanın sonu.)
 # Geometrik markların yerini alan, marka adının ilk harfini kullanan ikonlar.
 # Her birinin stüdyo DNA'sı var — "swap testi"ni geçen formlar.
 
@@ -567,7 +448,7 @@ def _pil_icon_negative(first: str, pc: str, bg: str, ac: str, S: int = 640, tpl:
     m = int(S * 0.06)
     d.rectangle([m, m, S - m, S - m], fill=_pil_rgb(pc))
     fs = int(S * 0.74)
-    f = _pil_font(f"tpl_{tpl}", fs)
+    f = _pil_font(_tpl_font_name(tpl), fs)
     bb = d.textbbox((0, 0), first, font=f)
     tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
     ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.03)
@@ -587,7 +468,7 @@ def _pil_icon_diagonal(first: str, pc: str, bg: str, ac: str, S: int = 640, tpl:
     img = Image.new("RGB", (S, S), _pil_rgb(bg))
     d = ImageDraw.Draw(img)
     fs = int(S * 0.82)
-    f = _pil_font(f"tpl_{tpl}", fs)
+    f = _pil_font(_tpl_font_name(tpl), fs)
     bb = d.textbbox((0, 0), first, font=f)
     tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
     ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
@@ -621,7 +502,7 @@ def _pil_icon_split(first: str, pc: str, ac: str, bg: str, S: int = 640, tpl: st
     dl = ImageDraw.Draw(left)
     dr = ImageDraw.Draw(right)
     fs = int(S * 0.82)
-    f = _pil_font(f"tpl_{tpl}", fs)
+    f = _pil_font(_tpl_font_name(tpl), fs)
     bb = dl.textbbox((0, 0), first, font=f)
     tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
     ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
@@ -646,7 +527,7 @@ def _pil_icon_frame(first: str, pc: str, bg: str, ac: str, S: int = 640, tpl: st
     img = Image.new("RGB", (S, S), _pil_rgb(bg))
     d = ImageDraw.Draw(img)
     fs = int(S * 0.82)
-    f = _pil_font(f"tpl_{tpl}", fs)
+    f = _pil_font(_tpl_font_name(tpl), fs)
     bb = d.textbbox((0, 0), first, font=f)
     tx = (S - (bb[2] - bb[0])) // 2 - bb[0]
     ty = (S - (bb[3] - bb[1])) // 2 - bb[1] - int(S * 0.04)
@@ -722,8 +603,8 @@ def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
     font değil (bkz. _resolve_template).
     area_top + area_h alanının içine dikey olarak ortalar.
     """
-    fs = _fit_font_size(name, f"tpl_{tpl}", avail_w)
-    f = _pil_font(f"tpl_{tpl}", fs)
+    fs = _fit_font_size(name, _tpl_font_name(tpl), avail_w)
+    f = _pil_font(_tpl_font_name(tpl), fs)
     bb = d.textbbox((0, 0), name, font=f)
     nh = bb[3] - bb[1]
     # NOT (3 Tem 2026 hotfix #3 — GERÇEK KÖK NEDEN): "name_y" PIL'in text-çizme
@@ -744,6 +625,98 @@ def _draw_wordmark(d: ImageDraw.ImageDraw, name: str, tag: str,
         gap = max(20, int(fs * 0.20))
         ink_bottom = ink_top + nh
         d.text((x, ink_bottom + gap), tag.upper()[:42], font=tf, fill=_pil_rgb(color))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  OPTİK DİZGİ MOTORU + STİL SİNYALLERİ (20 Tem 2026 — Görev 2A)
+#  Kalite kök nedeni: "dizilmiş" görünüm. Çözüm: template başına tracking kararı,
+#  gerçek font metriğiyle tracked sığdırma, merkezî kontrast guard'ı ve brief'ten
+#  stil sinyali okuyan resolver. Not: _draw_tracked/_tracked_width TİPO bölümünde
+#  tanımlı — modül seviyesinde sıra önemsiz, çağrı runtime'da çözülür.
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Template başına optik tracking (fs oranı). A-E'de 0 — mevcut davranış DEĞİŞMEZ
+# (tpl B'nin bar geometrisi _fit_font_size ile senkron, ona dokunulmuyor).
+_TPL_TRACKING = {
+    "F": 0.02, "G": 0.06, "H": 0.10, "I": 0.04, "J": 0.0,
+}
+
+
+def _fit_tracked(text: str, font_name: str, avail_w: int, k: float,
+                 max_s: int = 220, min_s: int = 28) -> int:
+    """Tracking'i hesaba katan font sığdırma (tipo'daki kapalı formülün genel hali)."""
+    ref = 200
+    f_ref = _pil_font(font_name, ref)
+    try:
+        w_ref = sum(f_ref.getlength(ch) for ch in text)
+    except Exception:
+        return min_s
+    per_fs = w_ref / ref + k * max(0, len(text) - 1)
+    if per_fs <= 0:
+        return max_s
+    return max(min_s, min(max_s, int((avail_w * 0.96) / per_fs)))
+
+
+def _cguard(color: str, bg: str) -> str:
+    """Kontrast guard'ı — hotfix #7 pattern'inin merkezî hali. color, bg ile aynı
+    koyu/açık kategorideyse güvenli nötre düşer (Meridyen Galeri dersi)."""
+    return color if _is_dark_hex(color) != _is_dark_hex(bg) else (
+        "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+    )
+
+
+# Brief'ten stil sinyali → template. Sıra ÖNEMLİ: kurumsal önce (VonArt koşullu
+# kararı, 20 Tem: kurumsal sinyal gelirse classic corporate template; default
+# anti-jenerik kalır — stil-referans.md §1c2).
+_CORPORATE_SIGNALS = (
+    "corporate", "kurumsal", "hukuk", "law firm", "legal", "avukat", "finans",
+    "finance", "banka", "bank", "sigorta", "insurance", "muhasebe", "accounting",
+    "danışmanlık", "consulting", "kamu", "holding", "gayrimenkul", "real estate",
+)
+_EDITORIAL_SIGNALS = (
+    "luxury", "lüks", "editorial", "editoryal", "couture", "galeri", "gallery",
+    "sanat", "dergi", "magazine", "mücevher", "jewel", "parfüm", "fine dining",
+)
+_RETRO_SIGNALS = (
+    "retro", "synth", "arcade", "gaming", "oyun stüdyo", "siber", "cyber",
+    "uzay", "space", "fütür", "futur", "neon", "yazılım", "software", "tech",
+)
+_CRAFT_SIGNALS = (
+    "kahve", "coffee", "craft", "el yapımı", "handmade", "bira", "brew",
+    "roast", "atölye", "bakery", "fırın", "şarap", "wine", "organik",
+    "organic", "doğal", "natural",
+)
+
+
+def _style_signal(brief: dict) -> str:
+    """Sektör/konsept/mood metninden template sinyali çıkarır. Bulamazsa ''."""
+    parts = [
+        str(brief.get("sector", "")),
+        str((brief.get("studio_dna") or {}).get("sector", "")),
+        str(brief.get("concept_statement", "")),
+        " ".join(str(m) for m in (brief.get("mood_words") or [])),
+        str(brief.get("energy", "")),
+    ]
+    blob = " ".join(parts).lower()
+    for signals, tpl in (
+        (_CORPORATE_SIGNALS, "I"),
+        (_EDITORIAL_SIGNALS, "G"),
+        (_RETRO_SIGNALS, "F"),
+        (_CRAFT_SIGNALS, "H"),
+    ):
+        if any(s in blob for s in signals):
+            return tpl
+    return ""
+
+
+def _qa_flags(tpl: str, fs: int, name: str) -> None:
+    """QA kapısı (ölçülebilir kısım) — anti-jenerik checklist'in koda dökülebilen
+    maddeleri. Swap testi insan gözü ister; burada sadece log uyarısı üretilir,
+    pipeline ASLA kırılmaz."""
+    if fs <= 34:
+        print(f"[logo_qa] UYARI tpl={tpl}: '{name}' için fs={fs} çok küçük — uzun isim, lockup sıkışıyor")
+    if len(name) > 24:
+        print(f"[logo_qa] UYARI tpl={tpl}: isim {len(name)} karakter — kit önizlemede manuel kontrol önerilir")
 
 
 # ── ANA LOGO ─────────────────────────────────────────────────────────────────
@@ -789,9 +762,9 @@ _ENERGY_TEMPLATE_MAP = {
 
 _ENERGY_TIER_TEMPLATE = {
     "bold":      "A",  # color block — cesur, dolu
-    "luxury":    "B",  # dark statement — ağır, premium
+    "luxury":    "G",  # editorial masthead — 20 Tem 2026 v2: B yerine G (serif, editoryal)
     "cinematic": "B",  # dark statement — dramatik zemin
-    "playful":   "E",  # offset block — hafif, asimetrik
+    "playful":   "J",  # playful stack — 20 Tem 2026 v2: E yerine J (Fredoka, stacked lockup)
     "minimal":   "B",  # dark statement — sessiz güç
 }
 
@@ -848,6 +821,12 @@ def _resolve_template(brief: dict, studio_label: str = "") -> str:
         # gerçekten üretilmeye başlarsa onlar da buradan otomatik faydalanır.
         tpl = _ENERGY_TIER_TEMPLATE.get(energy, "")
     if not tpl:
+        # 20 Tem 2026 v2: brief'in sektör/konsept/mood metninden stil sinyali —
+        # kurumsal→I (VonArt koşullu), editoryal/lüks→G, retro/tech→F, craft→H.
+        # Stüdyo map'inden ÖNCE denenir: sinyal marka-spesifik, stüdyo etiketi
+        # ise detect_sector()'ün zayıf 7-sektör eşlemesinden geliyor.
+        tpl = _style_signal(brief)
+    if not tpl:
         tpl = _STUDIO_TEMPLATE_MAP.get(studio_label, "")
     if not tpl:
         # energy "cinematic" (varsayılan) VE studio_label eşleşmediyse — buraya
@@ -898,8 +877,8 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         # Dark statement — Pentagram / Wolff Olins
         tc = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
         _draw_wordmark(d, name, "", 88, W - 176, 0, H, pc, tpl)
-        fs = _fit_font_size(name, f"tpl_{tpl}", W - 176)
-        f = _pil_font(f"tpl_{tpl}", fs)
+        fs = _fit_font_size(name, _tpl_font_name(tpl), W - 176)
+        f = _pil_font(_tpl_font_name(tpl), fs)
         bb = d.textbbox((0, 0), name, font=f)
         nh = bb[3] - bb[1]
         # NOT (3 Tem 2026 hotfix #3): bu hesap _draw_wordmark'ın İÇİNDEKİ çizimi
@@ -926,13 +905,13 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         first = name[0] if name else "?"
         rest = name[1:]
         big_fs = min(490, H + 60)
-        bf = _pil_font(f"tpl_{tpl}", big_fs)
+        bf = _pil_font(_tpl_font_name(tpl), big_fs)
         d.text((20, -int(H * 0.09)), first, font=bf, fill=_pil_rgb(pc))
         if rest:
             bb1 = d.textbbox((20, -int(H * 0.09)), first, font=bf)
             rx = max(bb1[2] - 15, int(W * 0.30))
-            rest_fs = _fit_font_size(rest, f"tpl_{tpl}", W - rx - 60)
-            rf = _pil_font(f"tpl_{tpl}", rest_fs)
+            rest_fs = _fit_font_size(rest, _tpl_font_name(tpl), W - rx - 60)
+            rf = _pil_font(_tpl_font_name(tpl), rest_fs)
             rbb = d.textbbox((0, 0), rest, font=rf)
             rh = rbb[3] - rbb[1]
             ry = (H - rh) // 2 - int(H * 0.05)
@@ -963,6 +942,215 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
         d.rectangle([bx, by, bx + bw2, by + bh], fill=_pil_rgb(pc))
         tc = "#FFFFFF" if _is_dark_hex(pc) else "#0D0D0D"
         _draw_wordmark(d, name, tag, bx + 48, bw2 - 100, by, bh, tc, tpl)
+
+    # ── TEMPLATE v2 (20 Tem 2026, Görev 2A): F-J art-directed lockup'lar ─────
+    # No.1 kuralı her blokta: tek güçlü element, boşluk aktif, max 2 renk + aksan.
+
+    elif tpl == "F":
+        # F: RETRO-FÜTÜRİST ECHO — Archivo Black, kayan renk kopyaları + ufuk çizgileri.
+        # Trend: retro-fütürizm. Tek güçlü element: echo'lu wordmark.
+        fname = _tpl_font_name(tpl)
+        k = _TPL_TRACKING["F"]
+        tc = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+        fs = _fit_tracked(name, fname, W - 320, k)
+        f = _pil_font(fname, fs)
+        tr = int(k * fs)
+        tw = int(_tracked_width(name, f, tr))
+        bb = d.textbbox((0, 0), name, font=f)
+        nh = bb[3] - bb[1]
+        ink_top = (H - nh) // 2 - int(H * 0.08)
+        y = ink_top - bb[1]
+        x = (W - tw) // 2
+        for off, col in ((int(fs * 0.055) + 8, ac), (int(fs * 0.03) + 4, sc)):
+            _draw_tracked(d, name, f, x + off, y + off, _pil_rgb(_cguard(col, bg)), tr)
+        _draw_tracked(d, name, f, x, y, _pil_rgb(tc), tr)
+        line_y = ink_top + nh + int(H * 0.09)
+        acr = _pil_rgb(_cguard(ac, bg))
+        for i, lh in enumerate((6, 4, 2, 1)):
+            ly = line_y + i * int(H * 0.045)
+            if ly + lh < H - 36:
+                d.rectangle([x, ly, x + tw, ly + lh], fill=acr)
+        if tag:
+            ts = max(22, fs // 6)
+            tf = _pil_font("body", ts)
+            tg = tag.upper()[:42]
+            ttr = int(0.30 * ts)
+            tag_w = _tracked_width(tg, tf, ttr)
+            _draw_tracked(d, tg, tf, (W - tag_w) // 2, 34,
+                          _pil_rgb(_cguard(sc, bg)), ttr)
+        _qa_flags(tpl, fs, name)
+
+    elif tpl == "G":
+        # G: EDITORIAL MASTHEAD — Bodoni Moda, çift editoryal çizgi, tracked serif.
+        # Lüks/editoryal sinyali. Tek güçlü element: masthead dizgisi.
+        fname = _tpl_font_name(tpl)
+        k = _TPL_TRACKING["G"]
+        fs = _fit_tracked(name, fname, W - 360, k)
+        f = _pil_font(fname, fs)
+        tr = int(k * fs)
+        tw = int(_tracked_width(name, f, tr))
+        bb = d.textbbox((0, 0), name, font=f)
+        nh = bb[3] - bb[1]
+        ink_top = (H - nh) // 2 - int(H * 0.02)
+        y = ink_top - bb[1]
+        x = (W - tw) // 2
+        _draw_tracked(d, name, f, x, y, _pil_rgb(_cguard(pc, bg)), tr)
+        rule_w = min(int(tw * 1.16), W - 220)
+        rx = (W - rule_w) // 2
+        top_y = ink_top - int(H * 0.13)
+        bot_y = ink_top + nh + int(H * 0.11)
+        acr = _pil_rgb(_cguard(ac, bg))
+        d.rectangle([rx, top_y, rx + rule_w, top_y + 3], fill=acr)
+        d.rectangle([rx, top_y + 8, rx + rule_w, top_y + 9], fill=acr)
+        d.rectangle([rx, bot_y, rx + rule_w, bot_y + 1], fill=acr)
+        d.rectangle([rx, bot_y + 6, rx + rule_w, bot_y + 9], fill=acr)
+        cxm = W // 2
+        dr = max(5, int(fs * 0.045))
+        dy = top_y - int(H * 0.05)
+        d.polygon([(cxm, dy - dr), (cxm + dr, dy), (cxm, dy + dr), (cxm - dr, dy)], fill=acr)
+        if tag:
+            ts = max(22, fs // 7)
+            tf = _pil_font("body", ts)
+            tg = tag.upper()[:42]
+            ttr = int(0.32 * ts)
+            tag_w = _tracked_width(tg, tf, ttr)
+            _draw_tracked(d, tg, tf, (W - tag_w) // 2, bot_y + 9 + int(H * 0.05),
+                          _pil_rgb(_cguard(sc, bg)), ttr)
+        _qa_flags(tpl, fs, name)
+
+    elif tpl == "H":
+        # H: LINEWORK BADGE — ince çizgi rozet, geniş tracking, köşe tikleri.
+        # Craft/artisanal sinyali. Badge lockup.
+        fname = _tpl_font_name(tpl)
+        k = _TPL_TRACKING["H"]
+        tc = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+        bx0, by0 = int(W * 0.14), int(H * 0.14)
+        bx1, by1 = W - bx0, H - by0
+        line_c = _pil_rgb(_cguard(pc, bg))
+        acr = _pil_rgb(_cguard(ac, bg))
+        try:
+            d.rounded_rectangle([bx0, by0, bx1, by1], radius=int(H * 0.06),
+                                outline=line_c, width=3)
+            d.rounded_rectangle([bx0 + 12, by0 + 12, bx1 - 12, by1 - 12],
+                                radius=int(H * 0.045), outline=acr, width=1)
+        except AttributeError:
+            d.rectangle([bx0, by0, bx1, by1], outline=line_c, width=3)
+            d.rectangle([bx0 + 12, by0 + 12, bx1 - 12, by1 - 12], outline=acr, width=1)
+        avail = (bx1 - bx0) - 160
+        fs = _fit_tracked(name, fname, avail, k, max_s=150)
+        f = _pil_font(fname, fs)
+        tr = int(k * fs)
+        tw = int(_tracked_width(name, f, tr))
+        bb = d.textbbox((0, 0), name, font=f)
+        nh = bb[3] - bb[1]
+        ink_top = (H - nh) // 2 - (int(H * 0.05) if tag else 0)
+        y = ink_top - bb[1]
+        x = (W - tw) // 2
+        _draw_tracked(d, name, f, x, y, _pil_rgb(tc), tr)
+        tick = int(H * 0.035)
+        for cx0, cy0, sx, sy in ((bx0 + 26, by0 + 26, 1, 1), (bx1 - 26, by0 + 26, -1, 1),
+                                 (bx0 + 26, by1 - 26, 1, -1), (bx1 - 26, by1 - 26, -1, -1)):
+            d.line([(cx0, cy0), (cx0 + sx * tick, cy0)], fill=acr, width=3)
+            d.line([(cx0, cy0), (cx0, cy0 + sy * tick)], fill=acr, width=3)
+        if tag:
+            ts = max(20, fs // 6)
+            tf = _pil_font("body", ts)
+            tg = tag.upper()[:42]
+            ttr = int(0.30 * ts)
+            tag_w = _tracked_width(tg, tf, ttr)
+            _draw_tracked(d, tg, tf, (W - tag_w) // 2, ink_top + nh + int(fs * 0.24),
+                          _pil_rgb(_cguard(sc, bg)), ttr)
+        _qa_flags(tpl, fs, name)
+
+    elif tpl == "I":
+        # I: CLASSIC CORPORATE — VonArt koşullu lockup (SADECE kurumsal sinyalde
+        # seçilir, bkz. _style_signal). Sol wordmark + dikey ayraç + sağ tagline.
+        fname = _tpl_font_name(tpl)
+        k = _TPL_TRACKING["I"]
+        avail = int(W * 0.52) if tag else (W - 320)
+        fs = _fit_tracked(name, fname, avail, k, max_s=170)
+        f = _pil_font(fname, fs)
+        tr = int(k * fs)
+        tw = int(_tracked_width(name, f, tr))
+        bb = d.textbbox((0, 0), name, font=f)
+        nh = bb[3] - bb[1]
+        ink_top = (H - nh) // 2
+        y = ink_top - bb[1]
+        x = 120 if tag else (W - tw) // 2
+        _draw_tracked(d, name, f, x, y, _pil_rgb(_cguard(pc, bg)), tr)
+        if tag:
+            div_x = x + tw + 64
+            d.rectangle([div_x, int(H * 0.30), div_x + 2, int(H * 0.70)],
+                        fill=_pil_rgb(_cguard(ac, bg)))
+            ts = max(22, fs // 5)
+            tg = tag.upper()[:42]
+            allowed = W - 100 - (div_x + 40)
+            while ts > 18:
+                tf = _pil_font("body", ts)
+                ttr = int(0.14 * ts)
+                if _tracked_width(tg, tf, ttr) <= allowed:
+                    break
+                ts -= 2
+            tf = _pil_font("body", ts)
+            ttr = int(0.14 * ts)
+            tbb = d.textbbox((0, 0), tg, font=tf)
+            th = tbb[3] - tbb[1]
+            ty = (H - th) // 2 - tbb[1]
+            _draw_tracked(d, tg, tf, div_x + 40, ty, _pil_rgb(_cguard(sc, bg)), ttr)
+        else:
+            uy = ink_top + nh + int(H * 0.07)
+            d.rectangle([x, uy, x + tw, uy + 3], fill=_pil_rgb(_cguard(ac, bg)))
+        _qa_flags(tpl, fs, name)
+
+    elif tpl == "J":
+        # J: PLAYFUL STACK — Fredoka. Çok kelime: staircase stack; tek kelime:
+        # dönüşümlü renk + baseline zıplaması. Playful energy'nin yeni evi (eski E).
+        fname = _tpl_font_name(tpl)
+        tc = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
+        words = [w for w in name.split() if w]
+        if len(words) >= 2:
+            l1, l2 = words[0], " ".join(words[1:])
+            fs = min(_fit_font_size(l1, fname, W - 460),
+                     _fit_font_size(l2, fname, W - 460), int(H * 0.38))
+            f = _pil_font(fname, fs)
+            bb1 = d.textbbox((0, 0), l1, font=f)
+            nh1 = bb1[3] - bb1[1]
+            bb2 = d.textbbox((0, 0), l2, font=f)
+            nh2 = bb2[3] - bb2[1]
+            gap = int(fs * 0.16)
+            top = (H - (nh1 + gap + nh2)) // 2 - (int(H * 0.05) if tag else 0)
+            x1 = 140
+            x2 = 140 + int(fs * 0.55)
+            d.text((x1, top - bb1[1]), l1, font=f, fill=_pil_rgb(_cguard(pc, bg)))
+            d.text((x2, top + nh1 + gap - bb2[1]), l2, font=f, fill=_pil_rgb(tc))
+            ascent, _desc = f.getmetrics()
+            dot_r = max(6, int(fs * 0.09))
+            dot_cx = x2 + int(f.getlength(l2)) + int(fs * 0.18)
+            dot_cy = top + nh1 + gap - bb2[1] + ascent - dot_r
+            d.ellipse([dot_cx - dot_r, dot_cy - dot_r, dot_cx + dot_r, dot_cy + dot_r],
+                      fill=_pil_rgb(_cguard(ac, bg)))
+            tag_x, tag_y = x1, top + nh1 + gap + nh2 + int(fs * 0.22)
+        else:
+            fs = _fit_font_size(name, fname, W - 360)
+            f = _pil_font(fname, fs)
+            bb = d.textbbox((0, 0), name, font=f)
+            nh = bb[3] - bb[1]
+            ink_top = (H - nh) // 2
+            y = ink_top - bb[1]
+            x = int((W - f.getlength(name)) // 2)
+            cols = [_pil_rgb(tc), _pil_rgb(_cguard(pc, bg)), _pil_rgb(_cguard(ac, bg))]
+            cx = float(x)
+            for i, ch in enumerate(name):
+                bounce = int(fs * 0.04) * (-1 if i % 2 else 1)
+                d.text((cx, y + bounce), ch, font=f, fill=cols[i % 3])
+                cx += f.getlength(ch)
+            tag_x, tag_y = x, ink_top + nh + int(fs * 0.24)
+        if tag:
+            ts = max(22, fs // 6)
+            tf = _pil_font("body", ts)
+            d.text((tag_x, tag_y), tag.upper()[:42], font=tf,
+                   fill=_pil_rgb(_cguard(sc, bg)))
+        _qa_flags(tpl, fs, name)
 
     return _png_uri(img)
 
@@ -1002,8 +1190,8 @@ def select_logo_mono_png(brief: dict, studio_label: str = "") -> str:
     d   = ImageDraw.Draw(img)
     tc_rgba = _pil_rgb(tc) + (255,)
 
-    fs = _fit_font_size(name, f"tpl_{tpl}", W - 100)
-    f  = _pil_font(f"tpl_{tpl}", fs)
+    fs = _fit_font_size(name, _tpl_font_name(tpl), W - 100)
+    f  = _pil_font(_tpl_font_name(tpl), fs)
     bb = d.textbbox((0, 0), name, font=f)
     nh = bb[3] - bb[1]
     ink_top = (H - nh) // 2
@@ -1102,7 +1290,7 @@ def select_logo_tipo_png(brief: dict, studio_label: str = "") -> str:
 
     # fs sığdırma — _fit_font_size tracking bilmiyor, kapalı formülle orantılı çözülüyor
     ref = 200
-    f_ref = _pil_font(f"tpl_{tpl}", ref)
+    f_ref = _pil_font(_tpl_font_name(tpl), ref)
     w_ref = sum(f_ref.getlength(ch) for ch in name)
     per_fs = w_ref / ref + k * max(0, len(name) - 1)
     fs = int((avail_w * 0.96) / per_fs) if per_fs > 0 else 120
@@ -1114,7 +1302,7 @@ def select_logo_tipo_png(brief: dict, studio_label: str = "") -> str:
         fs = int((avail_w * 0.96) / per_fs) if per_fs > 0 else 120
         fs = max(28, min(200, fs))
 
-    f = _pil_font(f"tpl_{tpl}", fs)
+    f = _pil_font(_tpl_font_name(tpl), fs)
     tracking = int(k * fs)
 
     total_w = _tracked_width(name, f, tracking)

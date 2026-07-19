@@ -104,7 +104,7 @@ def generate_html_preview(brief: dict) -> tuple:
 
     # fal.ai: sadece logo_icon (Recraft v3 — soyut geometrik, exact-text istemiyor),
     # app1, app2 (Flux JPEG)
-    fal_images = generate_all_images(brief)
+    fal_images = generate_all_images(brief, studio_label=studio_label)
     svgs["logo_icon"] = fal_images.get("logo_icon", "")
     svgs["app1"] = fal_images.get("app1", "")
     svgs["app2"] = fal_images.get("app2", "")

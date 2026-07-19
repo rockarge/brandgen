@@ -229,6 +229,32 @@ window.BRAND = {
     letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
   .logo-cell.inverse{background:var(--text)}
   .logo-wordmark{font-family:var(--hf);font-size:34px;color:var(--accent)}
+
+  /* KİNETİK LOGO (20 Tem 2026 — Görev 2A, CSS-only, $0)
+     "Tek statik logo dönemi bitti" — kit, logonun canlı/adaptif halini de sunar. */
+  .kinetic-stage{grid-column:1/-1;aspect-ratio:21/7;position:relative;overflow:hidden}
+  .kinetic-stage img{max-width:56%;max-height:52%;object-fit:contain;
+    animation:kinetic-reveal 6s var(--ease) infinite}
+  .kinetic-stage::after{content:"";position:absolute;left:0;top:0;bottom:0;width:34%;
+    background:linear-gradient(100deg,transparent 0%,var(--accent) 50%,transparent 100%);
+    opacity:.16;transform:translateX(-120%);
+    animation:kinetic-sweep 6s var(--ease) infinite;pointer-events:none}
+  @keyframes kinetic-reveal{
+    0%{clip-path:inset(0 100% 0 0);opacity:0}
+    8%{opacity:1}
+    30%{clip-path:inset(0 0 0 0)}
+    86%{clip-path:inset(0 0 0 0);opacity:1}
+    94%{opacity:0}
+    100%{clip-path:inset(0 100% 0 0);opacity:0}
+  }
+  @keyframes kinetic-sweep{
+    0%{transform:translateX(-120%)}
+    30%{transform:translateX(320%)}
+    100%{transform:translateX(320%)}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .kinetic-stage img,.kinetic-stage::after{animation:none}
+  }
   .misuse{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
     gap:12px;margin-top:28px}
   .misuse li{list-style:none;background:var(--surface);border:1px solid rgba(255,80,80,.18);
@@ -273,30 +299,12 @@ window.BRAND = {
   .voice-col.wenot li{opacity:.6;text-decoration:line-through;text-decoration-color:rgba(224,104,107,.5)}
 
   /* APPLICATIONS */
-  .apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  .apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
   .app{border-radius:16px;overflow:hidden;background:var(--surface);
-    border:1px solid var(--line);transition:transform .5s var(--ease);position:relative}
+    border:1px solid var(--line);transition:transform .5s var(--ease)}
   .app:hover{transform:translateY(-4px)}
   .app .ph{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
   .app img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
-  /* overlay: post text üstüne yerleşir */
-  .app-overlay{
-    position:absolute;left:0;right:0;bottom:0;
-    padding:40px 20px 20px;
-    background:linear-gradient(to top,rgba(0,0,0,.82) 0%,rgba(0,0,0,.45) 55%,transparent 100%);
-    display:flex;flex-direction:column;gap:8px;
-  }
-  .app-post{
-    font-family:var(--hf);font-size:clamp(14px,2vw,17px);font-weight:700;
-    color:#fff;line-height:1.3;letter-spacing:-.01em;
-    /* max 3 satır */
-    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
-  }
-  .app-label{
-    font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
-    color:var(--accent);
-  }
-  /* eğer post yoksa eski caption fallback */
   .app .cap{padding:14px 16px;font-size:13px;letter-spacing:.04em;color:var(--muted)}
 
   /* FOOTER */
@@ -536,6 +544,16 @@ window.BRAND = {
         cell.appendChild(el("span","lbl",v.lbl));
         grid.appendChild(cell);
       });
+      // KİNETİK LOGO (20 Tem 2026 — Görev 2A): mono varsa onu, yoksa primary'yi
+      // CSS animasyonla canlandır — sıfır AI maliyeti, kit farklılaştırıcısı.
+      var kSrc = has(L.mono) ? L.mono : (has(L.primary) ? L.primary : "");
+      if(kSrc){
+        var kin=el("div","logo-cell kinetic-stage");
+        var kimg=el("img"); kimg.src=kSrc; kimg.alt="Kinetik logo";
+        kin.appendChild(kimg);
+        kin.appendChild(el("span","lbl","Kinetik"));
+        grid.appendChild(kin);
+      }
     } else {
       // logo verilmemiş → marka adını tipografik wordmark olarak göster
       var cell=el("div","logo-cell");
@@ -642,15 +660,7 @@ window.BRAND = {
       var card=el("div","app");
       var img=el("img"); img.src=a.img; img.alt=a.caption||""; img.loading="lazy";
       card.appendChild(img);
-      // post varsa overlay, yoksa eski cap fallback
-      if(has(a.post)){
-        var ov=el("div","app-overlay");
-        ov.appendChild(el("p","app-post",esc(a.post)));
-        if(has(a.caption)) ov.appendChild(el("div","app-label",esc(a.caption)));
-        card.appendChild(ov);
-      } else if(has(a.caption)){
-        card.appendChild(el("div","cap",esc(a.caption)));
-      }
+      if(has(a.caption)) card.appendChild(el("div","cap",esc(a.caption)));
       grid.appendChild(card);
     });
     sec.appendChild(grid);

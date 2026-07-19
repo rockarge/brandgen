@@ -65,11 +65,35 @@ def _color_note(hex_code: str, name: str = "") -> str:
 # app1/app2 kalıyor çünkü bunlar "exact metin yaz" istemiyor, diffusion için
 # uygun görevler.
 
-def _logo_icon_prompt(brief: dict) -> str:
+# ── İKON STİL PRESET'LERİ (20 Tem 2026 — Görev 2A) ───────────────────────────
+# Template'e bağlı sanat yönetimi: ikon, ANA logonun template kişiliğiyle aynı
+# eksende üretilir (neo-minimal/retro/editorial/linework/corporate/playful).
+# Anti-jenerik kuyruk HER prompta eklenir — "AI-polished sameness" trend anti-tezi
+# (stil-referans.md §5 checklist ile örtüşür).
+_ICON_STYLE_PRESETS = {
+    "A": "Strong negative space, single carved geometric form.",
+    "B": "Sharp diagonal energy, cut geometry, dynamic tension.",
+    "C": "Unexpected duality, two-tone split geometry.",
+    "D": "Systematic modular geometry, precise structure.",
+    "E": "Minimal structural mark, generous whitespace.",
+    "F": "Retro-futurist geometry, echo lines, arcade-era spirit.",
+    "G": "Crafted thin linework, engraved editorial detail.",
+    "H": "Artisanal linework badge spirit, hand-crafted line detail.",
+    "I": "Conservative classic emblem geometry, balanced, trustworthy.",
+    "J": "Soft rounded playful geometry, bouncy friendly shapes.",
+}
+_ANTI_GENERIC_TAIL = (
+    "Distinctive and specific to the brand concept. "
+    "NOT a generic gradient blob, NOT a swoosh, NOT an overused abstract orb."
+)
+
+
+def _logo_icon_prompt(brief: dict, tpl: str = "") -> str:
+    preset = _ICON_STYLE_PRESETS.get(tpl, "")
     # Önce Sonnet'in ürettiği Recraft-optimized prompt'u kullan
     fal_prompt = brief.get("fal_icon_prompt", "").strip()
     if fal_prompt and len(fal_prompt) > 30:
-        return fal_prompt
+        return f"{fal_prompt} {preset} {_ANTI_GENERIC_TAIL}".strip()
 
     # Fallback: brief alanlarından generic prompt (audit B2 fix: kelime ortası kesme yok)
     name      = _ascii_safe(brief.get("brand_name", "BRAND"))
@@ -90,7 +114,7 @@ def _logo_icon_prompt(brief: dict) -> str:
         f'{style} design. '
         f'Colors: {_color_note(primary)} on {_color_note(bg)} background, {_color_note(secondary)} accent. '
         f'Square format. No text. Scalable geometric shape. Clean edges. '
-        f'Vector illustration.'
+        f'Vector illustration. {preset} {_ANTI_GENERIC_TAIL}'
     ).strip()
 
 
@@ -167,29 +191,71 @@ def _app2_prompt(brief: dict) -> str:
 
 # ── fal.ai çağrıları ──────────────────────────────────────────────────────────
 
+def _bytes_to_data_uri(content: bytes, mime: str = "image/png") -> str:
+    """Ham içerik → data URI. Magic byte sniffing — header'a güvenme,
+    Recraft SVG → image/png yanlış header veriyor."""
+    head = content.lstrip()[:10]
+    if head.startswith(b"<svg") or head.startswith(b"<?xml"):
+        mime = "image/svg+xml"
+    elif content[:4] == b"\x89PNG":
+        mime = "image/png"
+    elif content[:2] in (b"\xff\xd8", b"\xff\xe0", b"\xff\xe1"):
+        mime = "image/jpeg"
+    b64 = base64.b64encode(content).decode("ascii")
+    return f"data:{mime};base64,{b64}"
+
+
 async def _download_b64(url: str, mime: str) -> str:
-    """URL'den içeriği indir, data URI olarak döndür.
-    İçerik magic byte'larına göre MIME tespit eder — fal.ai CDN SVG'yi image/png diye servis eder."""
+    """URL'den içeriği indir, data URI olarak döndür."""
     async with httpx.AsyncClient(timeout=45) as client:
         resp = await client.get(url)
         resp.raise_for_status()
-        content = resp.content
-        # Magic byte sniffing — header'a güvenme, Recraft SVG → image/png yanlış header veriyor
-        head = content.lstrip()[:10]
-        if head.startswith(b"<svg") or head.startswith(b"<?xml"):
-            mime = "image/svg+xml"
-        elif content[:4] == b"\x89PNG":
-            mime = "image/png"
-        elif content[:2] in (b"\xff\xd8", b"\xff\xe0", b"\xff\xe1"):
-            mime = "image/jpeg"
-        b64 = base64.b64encode(content).decode("ascii")
-        return f"data:{mime};base64,{b64}"
+        return _bytes_to_data_uri(resp.content, mime)
+
+
+# ── İKON ÇOKLU-ADAY + OTOMATİK SEÇİM (20 Tem 2026 — Görev 2A) ────────────────
+# Serhat kararı (20 Tem): üretim başına 2-3 aday, otomatik seçim (~$0.13 kabul).
+_ICON_N_CANDIDATES = 3
+
+
+def _score_icon_bytes(content: bytes) -> float:
+    """İkon adayını PIL ile skorlar (network yok, ~ms). Üç ölçüt:
+    - kapsama: ikon dolgusu ideal bantta mı (%12-55 — ne cılız ne boğucu)
+    - merkezlilik: form optik merkeze oturuyor mu
+    - flatness: düz vektör mü, gradient-bulamaç mı (anti-jenerik: az renk iyi)
+    SVG/bozuk içerik 0 alır — PNG adaylar öne geçer."""
+    try:
+        import io as _io2
+        from PIL import Image as _Img
+        img = _Img.open(_io2.BytesIO(content)).convert("RGB").resize((128, 128))
+        px = list(img.getdata())
+        bgc = px[0]
+
+        def _close(a, b, t=40):
+            return abs(a[0]-b[0]) <= t and abs(a[1]-b[1]) <= t and abs(a[2]-b[2]) <= t
+
+        fg_idx = [i for i, p in enumerate(px) if not _close(p, bgc)]
+        if not fg_idx:
+            return 0.0
+        cov = len(fg_idx) / len(px)
+        cov_score = max(0.0, 1.0 - abs(cov - 0.33) / 0.33)
+        xs = [i % 128 for i in fg_idx]
+        ys = [i // 128 for i in fg_idx]
+        cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+        center_score = max(0.0, 1.0 - (((cx - 64) ** 2 + (cy - 64) ** 2) ** 0.5) / 64)
+        ncol = img.getcolors(maxcolors=100000)
+        n = len(ncol) if ncol else 100000
+        flat_score = 1.0 if n <= 400 else max(0.0, 1.0 - (n - 400) / 4000)
+        return 0.45 * cov_score + 0.25 * center_score + 0.30 * flat_score
+    except Exception:
+        return 0.0
 
 
 async def _recraft_icon(prompt: str) -> str:
     """Recraft v3 — vector_illustration stili. Sadece İKON için (soyut geometrik mark,
-    exact-text istemiyor — diffusion için uygun görev). 2 Tem 2026: logo_primary/tipo
-    buradan kaldırıldı, bkz. dosya başlığı."""
+    exact-text istemiyor — diffusion için uygun görev).
+    20 Tem 2026: tek çağrıda _ICON_N_CANDIDATES aday üretir, _score_icon_bytes ile
+    en iyisi otomatik seçilir. Dönen arayüz DEĞİŞMEDİ (tek data URI veya "")."""
     try:
         result = await asyncio.to_thread(
             fal_client.run,
@@ -198,11 +264,29 @@ async def _recraft_icon(prompt: str) -> str:
                 "prompt": prompt,
                 "image_size": "square_hd",       # 1024×1024 — ikon zaten kare, çelişki yok
                 "style": "vector_illustration",
-                "num_images": 1,
+                "num_images": _ICON_N_CANDIDATES,
             },
         )
-        url = result["images"][0]["url"]
-        return await _download_b64(url, "image/png")
+        images = (result.get("images") or [])[:_ICON_N_CANDIDATES]
+        if not images:
+            return ""
+        contents: list = []
+        async with httpx.AsyncClient(timeout=45) as client:
+            for im in images:
+                try:
+                    r = await client.get(im["url"])
+                    r.raise_for_status()
+                    contents.append(r.content)
+                except Exception as de:
+                    print(f"[image_generator] ikon aday indirilemedi: {de}")
+        if not contents:
+            return ""
+        scored = sorted(((_score_icon_bytes(c), i, c) for i, c in enumerate(contents)),
+                        key=lambda t: t[0], reverse=True)
+        best_score, best_i, best = scored[0]
+        print(f"[image_generator] ikon aday skorları: "
+              f"{[(i, round(s, 3)) for s, i, _ in scored]} → seçilen #{best_i}")
+        return _bytes_to_data_uri(best, "image/png")
     except Exception as e:
         print(f"[image_generator] Recraft hata (icon): {e}")
         return ""
@@ -231,13 +315,19 @@ async def _flux_app(prompt: str) -> str:
 
 # ── Ana fonksiyon ─────────────────────────────────────────────────────────────
 
-def generate_all_images(brief: dict) -> dict:
+def generate_all_images(brief: dict, studio_label: str = "") -> dict:
     """
     3 görseli paralel üret (2 Tem 2026 öncesi 5'ti — logo_primary/tipo artık
     logo_generator.py'nin PIL fonksiyonlarından geliyor, bkz. dosya başlığı).
 
+    20 Tem 2026 (Görev 2A): studio_label opsiyonel parametresi eklendi — ikon
+    prompt'una template'e bağlı stil preset'i eklemek için ANA logoyla AYNI
+    _resolve_template() kararı kullanılır (marka tutarlılığı). Parametre
+    verilmezse eski davranışa düşer (preset'siz ama anti-jenerik kuyruk yine var).
+
     Parametreler:
-        brief : normalize edilmiş brand brief dict
+        brief        : normalize edilmiş brand brief dict
+        studio_label : brand_brief'in studio_dna etiketi (template kararı için)
 
     Döner:
         {
@@ -247,9 +337,19 @@ def generate_all_images(brief: dict) -> dict:
         }
     Hatalı slotlar "" döner — template boş slotu gizler, pipeline kırılmaz.
     """
+    tpl = ""
+    try:
+        try:
+            from . import logo_generator as _lg
+        except ImportError:
+            import logo_generator as _lg
+        tpl = _lg._resolve_template(brief, studio_label)
+    except Exception as e:
+        print(f"[image_generator] template kararı alınamadı (preset'siz devam): {e}")
+
     async def _run():
         return await asyncio.gather(
-            _recraft_icon(_logo_icon_prompt(brief)),
+            _recraft_icon(_logo_icon_prompt(brief, tpl)),
             _flux_app(_app1_prompt(brief)),
             _flux_app(_app2_prompt(brief)),
             return_exceptions=True,
