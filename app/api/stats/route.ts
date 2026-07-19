@@ -3,6 +3,11 @@
  * Döner: { generated, freeRemaining }
  *   generated:     status='done' job sayısı (gerçek üretim sayısı)
  *   freeRemaining: 200 kotasından kalan ücretsiz üretim hakkı
+ *
+ * 20 Tem 2026 (Serhat direktifi): freeRemaining artık SADECE BAŞARILI (done)
+ * free üretimleri düşer — hatalı/yarım kalan job'lar kotayı yemez. Önceden tüm
+ * free job'lar sayılıyordu; landing "90 üretildi · 92 kaldı" gibi tutarsız
+ * görünüyordu (200-90=110 beklenirken). Kural: kalan = kota - başarılı üretim.
  * 5 dk CDN cache — her sayfa yüklemesinde DB'ye gitmez.
  */
 import { NextResponse } from "next/server";
@@ -17,7 +22,7 @@ export async function GET() {
     const db = supabaseAdmin();
     const [doneRes, freeRes] = await Promise.all([
       db.from("jobs").select("id", { count: "exact", head: true }).eq("status", "done"),
-      db.from("jobs").select("id", { count: "exact", head: true }).eq("tier", "free"),
+      db.from("jobs").select("id", { count: "exact", head: true }).eq("tier", "free").eq("status", "done"),
     ]);
     const res = NextResponse.json({
       generated: doneRes.count ?? 0,
