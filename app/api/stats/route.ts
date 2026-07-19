@@ -14,19 +14,31 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+// 20 Tem 2026: Next Data Cache, supabase-js'in outbound fetch'ini URL bazında
+// önbellekleyip iki sayacın FARKLI anlardan gelmesine yol açtı (canlıda 90/109
+// tutarsızlığı — matematiksel olarak imkansız kombinasyon). Kapatıldı:
+export const fetchCache = "force-no-store";
 
 const FREE_QUOTA = 200;
 
 export async function GET() {
   try {
     const db = supabaseAdmin();
-    const [doneRes, freeRes] = await Promise.all([
-      db.from("jobs").select("id", { count: "exact", head: true }).eq("status", "done"),
-      db.from("jobs").select("id", { count: "exact", head: true }).eq("tier", "free").eq("status", "done"),
-    ]);
+    // TEK sorgu, TEK anlık görüntü — iki sayaç aynı sonuç kümesinden türetilir,
+    // tutarsızlık sınıfı (cache/yarış) mimari olarak imkansız hale gelir.
+    // NOT: PostgREST satır limiti (varsayılan 1000) — done sayısı 1000'i aşarsa
+    // count-bazlı sorguya dönülmeli (o gün geldiğinde güzel bir gün olacak).
+    const { data, error } = await db
+      .from("jobs")
+      .select("tier")
+      .eq("status", "done")
+      .limit(5000);
+    if (error) throw error;
+    const doneAll = data?.length ?? 0;
+    const doneFree = (data ?? []).filter((r) => r.tier === "free").length;
     const res = NextResponse.json({
-      generated: doneRes.count ?? 0,
-      freeRemaining: Math.max(0, FREE_QUOTA - (freeRes.count ?? 0)),
+      generated: doneAll,
+      freeRemaining: Math.max(0, FREE_QUOTA - doneFree),
     });
     res.headers.set(
       "Cache-Control",
