@@ -10,9 +10,19 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
+          // BrandGen'in kendi kimlik rengi. WVC (Windy Venture Capital) altınıyla
+          // (#C9A84C) çakışmasın diye 9 Temmuz 2026'da mora (#7F77DD, "Live Palette"
+          // kimliği) çevrildi. Tailwind class'ları (text-brand-gold, bg-brand-gold,
+          // border-brand-gold, hepsi app/page.tsx + app/preview/[id]/page.tsx +
+          // app/success/[id]/page.tsx + components/Pricing.tsx içinde) bu değeri
+          // otomatik miras alır — o dosyalara dokunmaya gerek yok.
+          // Not (bilinen teknik borç): key adı hâlâ "gold" ama renk artık mor.
+          // Temiz isim (örn. "accent") değişikliği 4 dosyayı birlikte güncellemeyi
+          // gerektirir, kasıtlı olarak Faz 2'ye (pipeline zenginleştirme) bırakıldı —
+          // tek başına düşük riskli olsun diye bu pass'te sadece renk değişti.
           black: "#0A0A0A",
           offwhite: "#F1EBE1",
-          gold: "#C9A84C",
+          gold: "#7F77DD",
         },
       },
       fontFamily: {
