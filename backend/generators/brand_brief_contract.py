@@ -71,6 +71,12 @@ DEFAULTS: dict[str, Any] = {
     "mark_family":          "",
     "mark_link":            "",
 
+    # Görev 2E (20 Tem 2026): dil bilinçli marka adı büyütmesi. Sonnet Türkçe
+    # kelimede i→İ, yabancı kelimede i→I yapar ("AXIS LOGISTICS" doğru, eskiden
+    # "AXİS LOGİSTİCS" basılıyordu). Boşsa _brand_upper eski Türkçe varsayımına
+    # düşer (geriye dönük güvenli).
+    "brand_name_upper":     "",
+
     # Görev 2C (20 Tem 2026): kapanış "Bu kitte olmayan" listesi — Sonnet
     # sektöre özgü 3 madde üretir (Pepito canlı testi bulgusu: sabit liste
     # kutu markasına "ambalaj yok" diyordu). Boşsa template kendi

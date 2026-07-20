@@ -37,6 +37,7 @@ from PIL import Image, ImageDraw
 
 from .logo_generator import (
     _resolve_template,
+    _brand_upper,          # dil bilincli marka adi buyutme (20 Tem 2026)
     _tpl_font_name,
     _pil_font,
     _pil_rgb,
@@ -105,7 +106,9 @@ def _tpl_ctx(brief: dict, studio_label: str) -> dict:
         "comp": _COMP.get(tpl, "block"),
         "font": _tpl_font_name(tpl),
         "track": _TPL_TRACKING.get(tpl, 0.0),
-        "name": brief.get("brand_name", "BRAND"),
+        "name": _brand_upper(brief),   # 20 Tem: dil bilincli buyutme — tum
+        # asset'ler (kartvizit/banner/profil) bu tek kaynaktan besleniyor,
+        # sonraki _tr_upper cagrilari zaten-buyuk metne dokunmaz.
         "tagline": brief.get("tagline", ""),
         "primary": brief.get("primary_color", "#C9A25A"),
         "secondary": brief.get("secondary_color", "#8B8B7A"),

@@ -58,6 +58,28 @@ def _tr_upper(s: str) -> str:
     return (s or "").replace("i", "\u0130").upper()
 
 
+def _brand_upper(brief: dict) -> str:
+    """Marka adinin buyuk harfli hali — DIL BILINCLI. (20 Tem 2026)
+
+    SORUN: _tr_upper her ismi Turkce sanip i -> noktali I yapiyordu.
+    "Sigorta" dogru cikiyordu ama "Axis" / "Logistics" YANLIS cikiyordu.
+    Kod tek basina bir kelimenin Turkce mi yabanci mi oldugunu bilemez.
+
+    COZUM: karari dili bilen katman versin — Sonnet `brand_name_upper` alanini
+    kelime kelime dogru buyutuyor (semada ornekli kural var). Burada sadece
+    okunuyor. Alan bossa (eski job / Sonnet atladi) eski davranisa dusulur:
+    Turkce varsayimi, cunku musteri tabani agirlikli Turkce.
+
+    Guvenlik: donen deger marka adiyla ayni harf sayisinda degilse (Sonnet
+    kisaltmis/uydurmus olabilir) guvenilmez sayilir, fallback devreye girer.
+    """
+    raw = (brief.get("brand_name") or "").strip()
+    up = (brief.get("brand_name_upper") or "").strip()
+    if up and len(up) == len(raw):
+        return up
+    return _tr_upper(raw)
+
+
 def hex_to_rgb(hex_color: str) -> tuple:
     """#RRGGBB → (R, G, B)"""
     hex_color = hex_color.lstrip("#")
@@ -873,7 +895,7 @@ def select_logo_primary_png(brief: dict, studio_label: str = "", pil_params: dic
 
     PNG data URI döner (SVG yok, browser font yok).
     """
-    name   = _tr_upper(brief.get("brand_name", "BRAND"))
+    name   = _brand_upper(brief)
     pc     = brief.get("primary_color", "#C9A25A")
     sc     = brief.get("secondary_color", "#8B8B7A")
     ac     = brief.get("accent_color") or sc
@@ -1202,7 +1224,7 @@ def select_logo_mono_png(brief: dict, studio_label: str = "") -> str:
       fontlarla çıkmasın diye şart: çağıran kod (html_preview.py, pipeline.py)
       select_logo_primary_png'ye verdiği AYNI studio_label'ı buraya da vermeli.
     """
-    name = _tr_upper(brief.get("brand_name", "BRAND"))
+    name = _brand_upper(brief)
     bg   = brief.get("bg_color", "#0F0D0C")
     tc   = "#F2EDE4" if _is_dark_hex(bg) else "#1A1A1A"
     tag  = brief.get("tagline", "")
@@ -1285,7 +1307,7 @@ def select_logo_tipo_png(brief: dict, studio_label: str = "") -> str:
 
     PNG data URI döner. Deterministik — diffusion yok, Türkçe karakter riski yok.
     """
-    name   = _tr_upper(brief.get("brand_name", "BRAND"))
+    name   = _brand_upper(brief)
     pc     = brief.get("primary_color", "#C9A25A")
     sc     = brief.get("secondary_color", "#8B8B7A")
     ac     = brief.get("accent_color") or sc
