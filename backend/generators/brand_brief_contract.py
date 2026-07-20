@@ -20,6 +20,10 @@ KURAL:
     2. _knowledge/brandgen-mimari.md §5 window.BRAND şemasını güncelle
     3. html_preview.py'de ilgili yeri .get() yerine doğrudan kullan
 """
+# Python 3.9 uyumu (Mac'te lokal QA koşabilsin): 3.10+ tip
+# annotation'larini (dict | None) string'e cevirir, runtime degismez.
+from __future__ import annotations
+
 
 from typing import Any
 

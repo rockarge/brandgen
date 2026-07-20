@@ -12,6 +12,10 @@ Claude API ile brand brief üretimi.
 Kullanıcı promptu → structured brand brief JSON.
 Çıktı: normalize_brief() ile garantili BrandBriefContract alanları.
 """
+# Python 3.9 uyumu (Mac'te lokal QA koşabilsin): 3.10+ tip
+# annotation'larini (dict | None) string'e cevirir, runtime degismez.
+from __future__ import annotations
+
 
 import json
 import os

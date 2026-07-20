@@ -26,6 +26,10 @@ asset_generator.py — Genişletilmiş marka asset'leri v2 (Görev 2B, 20 Tem 20
 Mobil hero (foto-gerçekçi) BURADA DEĞİL — image_generator.generate_all_images
 hero_dark/hero_light üretir (tüm fal çağrıları tek gather'da).
 """
+# Python 3.9 uyumu (Mac'te lokal QA koşabilsin): 3.10+ tip
+# annotation'larini (dict | None) string'e cevirir, runtime degismez.
+from __future__ import annotations
+
 
 import io
 import base64

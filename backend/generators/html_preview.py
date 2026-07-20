@@ -30,6 +30,10 @@ Pipeline (2 Tem 2026 audit sonrası güncellendi — bkz. brandgen-gorsel-audit-
 
 Maliyet: ~$0.05/üretim (Recraft ×1 + Flux ×2) — önceki ~$0.13'ten düştü.
 """
+# Python 3.9 uyumu (Mac'te lokal QA koşabilsin): 3.10+ tip
+# annotation'larini (dict | None) string'e cevirir, runtime degismez.
+from __future__ import annotations
+
 
 import os
 import re
@@ -106,6 +110,27 @@ def generate_html_preview(brief: dict) -> tuple:
     # app1, app2 (Flux JPEG) + hero_dark/hero_light (Flux 9:16 — Görev 2B)
     fal_images = generate_all_images(brief, studio_label=studio_label)
     svgs["logo_icon"] = fal_images.get("logo_icon", "")
+
+    # ── SLOT YENİDEN DÜZENİ (Görev 2E, 20 Tem 2026 — Serhat kararı) ──────────
+    # Serhat: "Tipo = Ana'nın şu anki hali olsun (o güzel duruyordu), Ana ise
+    # aile sistemli mark + altında wordmark olsun."
+    #
+    #   Ana   = AI mark + wordmark lockup      (YENİ — lockup_generator)
+    #   Tipo  = eski Ana (select_logo_primary_png, template lockup'lı)
+    #   İkon  = markın tek başına hali (AYNI SVG — ikinci AI çağrısı YOK)
+    #   Mono / Ters = değişmedi
+    #
+    # Eski tipo (dolu zemin + accent nokta) DÜŞTÜ; yerini daha karakterli olan
+    # aldı. Lockup kurulamazsa (mark boş/bozuk) ana slot eski PIL logosunda
+    # kalır → üretim asla kırılmaz.
+    from generators.lockup_generator import build_primary_lockup
+    _old_primary = svgs["logo_primary"]
+    _lockup = build_primary_lockup(brief, svgs["logo_icon"], studio_label=studio_label)
+    if _lockup:
+        svgs["logo_primary"] = _lockup
+        svgs["logo_tipo"] = _old_primary
+    else:
+        print("[html_preview] lockup kurulamadı → ana logo eski PIL çıktısında kaldı")
     svgs["app1"] = fal_images.get("app1", "")
     svgs["app2"] = fal_images.get("app2", "")
 

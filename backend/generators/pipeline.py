@@ -17,6 +17,10 @@ finalize_job: ödeme sonrası watermarksız dosyaları üretir + zip'ler
 ║  ayrı bir iyileştirme konusu, kapsam dışı bırakıldı (raporda belirtildi).    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
+# Python 3.9 uyumu (Mac'te lokal QA koşabilsin): 3.10+ tip
+# annotation'larini (dict | None) string'e cevirir, runtime degismez.
+from __future__ import annotations
+
 
 import io
 import zipfile

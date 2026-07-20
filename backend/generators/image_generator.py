@@ -28,6 +28,10 @@ Maliyet     : Recraft ×1 (~$0.04) + Flux ×2 (~$0.006) = ~$0.05/üretim
 Türkçe      : Marka adı _ascii_safe() ile temizlenir — sadece logo_icon fallback'inde
               kullanılıyor (ikon promptunda marka adı zaten harfe indirgeniyor, risk düşük).
 """
+# Python 3.9 uyumu (Mac'te lokal QA koşabilsin): 3.10+ tip
+# annotation'larini (dict | None) string'e cevirir, runtime degismez.
+from __future__ import annotations
+
 
 import os
 import re          # _strip_svg_bg için ZORUNLU — yokluğu 20 Tem'de sessiz

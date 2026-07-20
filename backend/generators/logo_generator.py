@@ -9,6 +9,10 @@ SVG template sistemi kullanılmadığı için legacy_svg_generator.py'ye taşın
 
 _is_dark_hex(): her iki katman da kullanıyor, aşağıda tek yerde tanımlı kaldı.
 """
+# Python 3.9 uyumu (Mac'te lokal QA koşabilsin): 3.10+ tip
+# annotation'larini (dict | None) string'e cevirir, runtime degismez.
+from __future__ import annotations
+
 
 import base64
 import html as html_esc
