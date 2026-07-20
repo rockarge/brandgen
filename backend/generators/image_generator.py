@@ -97,12 +97,62 @@ _ANTI_GENERIC_TAIL = (
 )
 
 
+# ── HARF-TÜREVLİ MARK AİLELERİ (20 Tem 2026, Görev 2E) ───────────────────────
+# Serhat'ın AXIS LOGISTICS örneğinden çıktı: "hep markanın ismi tamamı metin
+# olarak yazılıyor... illa birleşmiş 2 harf gibi de düşünme, harfi eğip bükerek
+# harfi çağrıştıran simgeler de olabiliyor."
+# 5 aile, 10 AI üretimiyle canlı test edildi; hepsi V4.1'de ayrışıyor.
+_MARK_FAMILY_RULES = {
+    "1": ("Build the mark from the brand's two initials joined into ONE form. "
+          "The two letters must read as a single designed unit, not as two "
+          "letters placed side by side."),
+    "2": ("Build the mark from ONE letter, abstracted: reduce it to its "
+          "essential strokes, then cut, bend, extend or interrupt one of them. "
+          "The letter must still be recognisable but must read as a form first."),
+    "3": ("Build the mark so its NEGATIVE SPACE carries the meaning. The empty "
+          "area inside or around the form must be read as a second shape that "
+          "expresses the brand concept."),
+    "4": ("Build the mark by transforming part of a letter into an object that "
+          "belongs to this industry. Letter and object must be ONE continuous "
+          "stroke, never a letter with a picture placed next to it."),
+    "5": ("Build the mark as a single letter held inside an enclosing form. "
+          "Choose the enclosing shape from the brand's own character — it must "
+          "NOT default to a circle. Letter and enclosure share one stroke logic "
+          "and a deliberate negative gap."),
+}
+# Aile 1 için bağlanma biçimi — Serhat: "bazen birleşik içiçe geçmiş, bazen ayrı"
+_MARK_LINK_RULES = {
+    "interlocked": ("The two letters overlap and interlock; where their strokes "
+                    "cross, one line breaks to show a clear over-under weave."),
+    "shared": ("The two letters share a common stroke — one letter's stem or "
+               "curve IS part of the other, so the pair reads as one "
+               "uninterrupted path."),
+    "adjacent": ("The two letters stay separate and only touch or align at one "
+                 "point; legibility comes first, the connection is restrained."),
+}
+
+
+def _family_rule(brief: dict) -> str:
+    """Sonnet'in seçtiği aileyi (ve aile 1'de bağlanma biçimini) İngilizce
+    geometri talimatına çevirir. Alan boşsa hiçbir şey eklenmez — eski
+    davranışa düşer, geriye dönük güvenli."""
+    fam = str(brief.get("mark_family", "")).strip()[:1]
+    rule = _MARK_FAMILY_RULES.get(fam, "")
+    if not rule:
+        return ""
+    if fam == "1":
+        link = str(brief.get("mark_link", "")).strip().lower()
+        rule += " " + _MARK_LINK_RULES.get(link, _MARK_LINK_RULES["interlocked"])
+    return rule
+
+
 def _logo_icon_prompt(brief: dict, tpl: str = "") -> str:
     preset = _ICON_STYLE_PRESETS.get(tpl, "")
+    family = _family_rule(brief)
     # Önce Sonnet'in ürettiği Recraft-optimized prompt'u kullan
     fal_prompt = brief.get("fal_icon_prompt", "").strip()
     if fal_prompt and len(fal_prompt) > 30:
-        return f"{fal_prompt} {preset} {_ANTI_GENERIC_TAIL}".strip()
+        return f"{fal_prompt} {family} {preset} {_ANTI_GENERIC_TAIL}".strip()
 
     # Fallback: brief alanlarından generic prompt (audit B2 fix: kelime ortası kesme yok)
     name      = _ascii_safe(brief.get("brand_name", "BRAND"))
@@ -335,6 +385,60 @@ async def _recraft_icon(prompt: str) -> str:
         return ""
 
 
+def _rgb_dict(hexs: str):
+    """'#RRGGBB' → {'r':..,'g':..,'b':..} — Recraft V4.1 colors formatı."""
+    try:
+        h = str(hexs).lstrip("#")
+        if len(h) == 3:
+            h = h[0]*2 + h[1]*2 + h[2]*2
+        return {"r": int(h[0:2], 16), "g": int(h[2:4], 16), "b": int(h[4:6], 16)}
+    except Exception:
+        return None
+
+
+async def _recraft_vector_mark(prompt: str, colors: list, bg: str) -> str:
+    """Recraft V4.1 text-to-vector — GERÇEK SVG mark. (20 Tem 2026, Görev 2E)
+
+    NEDEN V3'TEN GEÇİLDİ (canlı kanıt):
+    "Pepito" üretiminde Sonnet mükemmel bir geometri tarif etmişti (kare kontur +
+    kırık köşe + taşan soru işareti). V3 `vector_illustration` bunu YOK SAYIP
+    çocuk + sandık + yemek SAHNESİ çizdi. AYNI prompt V4.1'e verildiğinde tarif
+    birebir uygulandı. Kök neden: `vector_illustration` stil adı gereği illüstrasyon
+    priorı taşıyor. V4.1 text-to-vector'de `style` PARAMETRESİ YOK — o prior yapısal
+    olarak ortadan kalkıyor.
+
+    Ek kazançlar:
+    - `colors` + `background_color` RGB olarak ZORLANIYOR → palet kayması yok
+      (V3/Flux hex'i büyük ölçüde okumuyordu).
+    - Çıktı gerçek SVG: ölçeklenebilir, Illustrator/Figma'da düzenlenebilir.
+      stil-referans §3.3 "SVG tercih edilir PIL'e karşı" kuralıyla örtüşür.
+
+    NOT: bu endpoint'te `num_images` YOK → çoklu aday + _score_icon_bytes mantığı
+    buraya taşınamaz. Kayıp değil: o skorlama sahne ile mark'ı zaten ayırt etmiyordu
+    (3 adayın üçü de sahneyse en "dolgun" sahneyi seçiyordu).
+    """
+    try:
+        args = {"prompt": prompt, "image_size": "square_hd"}
+        cols = [c for c in (_rgb_dict(x) for x in (colors or [])) if c]
+        if cols:
+            args["colors"] = cols
+        bgc = _rgb_dict(bg) if bg else None
+        if bgc:
+            args["background_color"] = bgc
+        result = await asyncio.to_thread(
+            fal_client.run,
+            "fal-ai/recraft/v4.1/text-to-vector",
+            arguments=args,
+        )
+        images = result.get("images") or []
+        if not images:
+            return ""
+        return await _download_b64(images[0]["url"], "image/svg+xml")
+    except Exception as e:
+        print(f"[image_generator] Recraft V4.1 vector hata: {e}")
+        return ""
+
+
 async def _flux_app(prompt: str, image_size: str = "square_hd") -> str:
     """Flux Schnell ile editorial uygulama görseli üret. Döner: data:image/png;base64,... veya "".
     image_size: "square_hd" (1024×1024) | "portrait_16_9" (9:16 — mobil hero, 2B)."""
@@ -391,9 +495,26 @@ def generate_all_images(brief: dict, studio_label: str = "") -> dict:
     except Exception as e:
         print(f"[image_generator] template kararı alınamadı (preset'siz devam): {e}")
 
+    # Görev 2E (20 Tem 2026): mark artık V4.1 vector'den geliyor; V3 SADECE
+    # yedek. Palet Recraft'a RGB olarak zorlanıyor (renk kayması biter).
+    _mark_colors = [
+        brief.get("primary_color", ""),
+        brief.get("secondary_color", ""),
+    ]
+    _mark_bg = brief.get("bg_color", "")
+
+    async def _mark():
+        p = _logo_icon_prompt(brief, tpl)
+        uri = await _recraft_vector_mark(p, _mark_colors, _mark_bg)
+        if uri:
+            return uri
+        # V4.1 patlarsa üretim komple kırılmasın: eski V3 yolu yedek kalır.
+        print("[image_generator] V4.1 vector boş döndü → V3 yedeğine düşülüyor")
+        return await _recraft_icon(p)
+
     async def _run():
         return await asyncio.gather(
-            _recraft_icon(_logo_icon_prompt(brief, tpl)),
+            _mark(),
             _flux_app(_app1_prompt(brief)),
             _flux_app(_app2_prompt(brief)),
             # Görev 2B (20 Tem 2026): mobil hero dark/light — WVC brand-kit

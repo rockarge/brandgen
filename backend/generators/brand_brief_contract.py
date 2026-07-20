@@ -61,6 +61,12 @@ DEFAULTS: dict[str, Any] = {
     # 4 etiket üretebilir; boşsa asset_generator._DEFAULT_HIGHLIGHTS kullanılır.
     "highlight_labels":     [],
 
+    # Görev 2E (20 Tem 2026): harf-türevli mark ailesi. Sonnet 1-5 arası seçer;
+    # boşsa image_generator aile kuralı EKLEMEZ (eski davranış, geriye dönük
+    # güvenli). mark_link sadece aile 1'de anlamlı.
+    "mark_family":          "",
+    "mark_link":            "",
+
     # Görev 2C (20 Tem 2026): kapanış "Bu kitte olmayan" listesi — Sonnet
     # sektöre özgü 3 madde üretir (Pepito canlı testi bulgusu: sabit liste
     # kutu markasına "ambalaj yok" diyordu). Boşsa template kendi
