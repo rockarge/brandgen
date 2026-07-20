@@ -495,7 +495,11 @@ window.BRAND = {
      Sabit 21:9 kutu + max-width:46% "kutu içinde kutu" yapıyordu, ana logo
      grid hücrelerinden bile etkisiz kalıyordu. Poster artık kutu değil:
      ana logo kendi oranında TAM GENİŞLİK basılır, etiket posterin dışında. */
-  .logo-poster{position:relative;background:var(--surface);
+  /* Zemin YOK (20 Tem): poster'a giren görsel her durumda kendi zeminini
+     taşıyor (lockup SVG'si marka bg'siyle, eski PIL ana logosu da dolu
+     zeminli). Hücreye ayrıca surface vermek, iki farklı tonu yan yana
+     getirip kenarlarda bant oluşturuyordu. */
+  .logo-poster{position:relative;background:transparent;
     border:1px solid var(--line);border-radius:18px;
     margin-bottom:10px;overflow:hidden;line-height:0}
   .logo-poster img{width:100%;height:auto;max-height:560px;
