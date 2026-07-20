@@ -269,6 +269,9 @@ def finalize_job(job_id: str) -> None:
                 ("highlight_4",     f"{safe_name}_highlight_4.png",     (1080, 1080)),
                 ("banner_linkedin", f"{safe_name}_banner_linkedin.png", (1584, 396)),
                 ("banner_twitter",  f"{safe_name}_banner_twitter.png",  (1500, 500)),
+                # Görev 2D (20 Tem 2026): kurumsal kırtasiye
+                ("letterhead_a4",   f"{safe_name}_letterhead_a4.png",   (2481, 3508)),
+                ("envelope_dl",     f"{safe_name}_envelope_dl.png",     (2598, 1299)),
             ]
             for key, fname, sz in _ext_zip:
                 uri = ext.get(key, "")

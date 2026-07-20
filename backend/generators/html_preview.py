@@ -335,6 +335,9 @@ def generate_html_preview(brief: dict) -> tuple:
                 "bannerTwitter":  ext.get("banner_twitter", ""),
                 "heroMobileDark":  fal_images.get("hero_dark", ""),
                 "heroMobileLight": fal_images.get("hero_light", ""),
+                # Görev 2D (20 Tem 2026): kurumsal kırtasiye
+                "letterheadA4": ext.get("letterhead_a4", ""),
+                "envelopeDl":   ext.get("envelope_dl", ""),
             },
             # Görev 2C (20 Tem 2026): kapanış "Bu kitte olmayan" listesi.
             # Sonnet sektöre özgü 3 madde üretir; boşsa template kendi

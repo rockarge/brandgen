@@ -859,7 +859,8 @@ window.BRAND = {
     var hls=(A.highlights||[]).filter(function(h){return h && has(h.img);});
     var anyAsset = has(A.cardFront)||has(A.cardBack)||has(A.profileDark)||
       has(A.profileLight)||hls.length>0||has(A.bannerLinkedin)||
-      has(A.bannerTwitter)||has(A.heroMobileDark)||has(A.heroMobileLight);
+      has(A.bannerTwitter)||has(A.heroMobileDark)||has(A.heroMobileLight)||
+      has(A.letterheadA4)||has(A.envelopeDl);
     if(!anyAsset) return;
 
     if(!PLAYFUL){
@@ -936,6 +937,15 @@ window.BRAND = {
       sec.appendChild(g5);
     }
 
+    // Kurumsal kırtasiye — antetli kağıt (A4) + zarf (DL), Görev 2D
+    if(has(A.letterheadA4)||has(A.envelopeDl)){
+      sub("Kurumsal Kırtasiye — Matbaaya Hazır");
+      var g6=el("div","asset-grid");
+      if(has(A.letterheadA4)) g6.appendChild(card(A.letterheadA4,"Antetli Kağıt — A4"));
+      if(has(A.envelopeDl))   g6.appendChild(card(A.envelopeDl,"Zarf — DL"));
+      sec.appendChild(g6);
+    }
+
     app.appendChild(sec);
   })();
 
@@ -965,6 +975,7 @@ window.BRAND = {
     if(hls.length) have.push("Highlight kapakları — "+hls.length+" adet");
     if(has(A.bannerLinkedin)||has(A.bannerTwitter)) have.push("Sosyal banner — LinkedIn + X");
     if(has(A.heroMobileDark)||has(A.heroMobileLight)) have.push("Mobil hero — 9:16");
+    if(has(A.letterheadA4)||has(A.envelopeDl)) have.push("Kurumsal kırtasiye — antetli kağıt + zarf");
     var apps=(B.applications||[]).filter(function(a){return a && has(a.img);});
     if(apps.length) have.push("Instagram post şablonu — "+apps.length+" adet");
 

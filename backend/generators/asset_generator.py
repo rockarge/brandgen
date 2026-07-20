@@ -22,6 +22,13 @@ asset_generator.py — Genişletilmiş marka asset'leri v2 (Görev 2B, 20 Tem 20
   highlight_1..4               — IG highlight kapağı 1080×1080 (circle-safe)
   banner_linkedin (1584×396) / banner_twitter (1500×500)
   logo_reversed                — mono'nun polarite-ters hali
+  letterhead_a4 / envelope_dl  — kurumsal kırtasiye (Görev 2D, 20 Tem 2026)
+                                  antetli kağıt 2481×3508 (A4 @300dpi) +
+                                  zarf 2598×1299 (DL @300dpi). Kağıt HER ZAMAN
+                                  açık zeminde basılır (matbaa/gündelik kullanım
+                                  normu — marka rengi tam zemin OLMAZ); marka
+                                  DNA'sı logo + comp'a bağlı aksan motifiyle
+                                  taşınır (diğer asset'lerle aynı ilke).
 
 Mobil hero (foto-gerçekçi) BURADA DEĞİL — image_generator.generate_all_images
 hero_dark/hero_light üretir (tüm fal çağrıları tek gather'da).
@@ -75,6 +82,39 @@ def _tr_upper(s: str) -> str:
     """Türkçe-doğru büyük harf: i→İ (Python .upper() i→I yapar — QA v2'de
     'Ateşin'→'ATEŞIN', 'Meridyen'→'MERIDYEN' hatası yakalandı). ı→I zaten doğru."""
     return (s or "").replace("i", "İ").upper()
+
+
+def _slug(name: str) -> str:
+    """Marka adından web/e-posta slug'ı türetir.
+
+    BUG (letterhead QA, 20 Tem 2026 — bu görev sırasında bulundu, kartvizitteki
+    ESKİ inline koda da AYNEN sirayetliydi): Python'un varsayılan .lower()'ı
+    Türkçe büyük İ'yi (U+0130) TEK bir "i" değil, "i" + COMBINING DOT ABOVE
+    (U+0307) iki kod noktasına ayırıyor. c["name"] (_brand_upper çıktısı) İ
+    içeren her markada bu ikinci görünmez karakteri üretiyordu; "body" fontunda
+    glifi olmadığı için basılı çıktıda tofu kutusu olarak görünüyordu
+    ("kirikfi▢ncan.com" — Kırık Fincan letterhead QA'sında yakalandı).
+    Çözüm: .lower()'dan ÖNCE İ'yi düz "i"ye çevir, decompose hiç olmasın."""
+    n = (name or "brand").replace("İ", "i").lower().replace(" ", "")
+    for a, b in (("ı", "i"), ("ş", "s"), ("ğ", "g"), ("ü", "u"), ("ö", "o"), ("ç", "c")):
+        n = n.replace(a, b)
+    return n or "brand"
+
+
+def _dashed_rect(d, x0, y0, x1, y1, color, dash=14, gap=8, width=2):
+    """Pul alanı gibi kesik çizgili dikdörtgen çizer."""
+    x = x0
+    while x < x1:
+        x2 = min(x + dash, x1)
+        d.line([(x, y0), (x2, y0)], fill=color, width=width)
+        d.line([(x, y1), (x2, y1)], fill=color, width=width)
+        x += dash + gap
+    y = y0
+    while y < y1:
+        y2 = min(y + dash, y1)
+        d.line([(x0, y), (x0, y2)], fill=color, width=width)
+        d.line([(x1, y), (x1, y2)], fill=color, width=width)
+        y += dash + gap
 
 
 def _datauri_to_rgba(uri: str) -> "Image.Image | None":
@@ -814,12 +854,170 @@ def generate_card_front_v2(brief: dict, studio_label: str = "") -> Image.Image:
     y += int(CARD_H * 0.115)
     d.line([(x, y), (CARD_W - 44, y)], fill=dim, width=1)
     y += int(CARD_H * 0.055)
-    slug = c["name"].lower().replace(" ", "").replace("ı", "i").replace("ş", "s") \
-        .replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c")
+    slug = _slug(c["name"])
     cf = _pil_font("body", int(CARD_H * 0.045))
     d.text((x, y), f"hello@{slug}.com", font=cf, fill=muted)
     y += int(CARD_H * 0.09)
     d.text((x, y), f"{slug}.com", font=cf, fill=muted)
+    return img
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  KURUMSAL KIRTASİYE — antetli kağıt (A4) + zarf (DL). Görev 2D (20 Tem 2026)
+#  Serhat kararı: kite GİRER (kartvizitle aynı motor, $0, lockup DNA mirası).
+#  Karton çanta/dosya/ambalaj/etiket bilinçli olarak KİTE GİRMEZ (malzeme/kalıp/
+#  matbaa kararı, masa işi — bkz. brandgen-kimlik-zenginlestirme.md §2D).
+#  Kağıt HER ZAMAN açık zeminde ("gerçek kağıt" normu) — marka rengi tam zemin
+#  olarak basılmaz, logo + comp'a bağlı ince aksan motifi olarak taşınır.
+# ═════════════════════════════════════════════════════════════════════════════
+
+A4_W, A4_H = 2481, 3508   # 210×297mm @300dpi
+DL_W, DL_H = 2598, 1299   # 220×110mm @300dpi
+
+
+def _paper_logo(mono_uri: str, glyph_hex: str, bg_hex: str, target_h: int):
+    """Mono logoyu kağıt üstünde okunur bir renge (glyph_hex) yeniden boyar —
+    logo_reversed'daki alfa-maskeli yeniden boyama ile aynı teknik. Mono
+    yoksa/bozuksa None döner (çağıran yer metin fallback'ine düşer)."""
+    mono = _datauri_to_rgba(mono_uri)
+    if mono is None or mono.height == 0:
+        return None
+    ratio = target_h / mono.height
+    neww = max(1, int(mono.width * ratio))
+    mono_r = mono.resize((neww, target_h), Image.LANCZOS)
+    layer = Image.new("RGB", mono_r.size, _pil_rgb(glyph_hex))
+    paper = Image.new("RGB", mono_r.size, _pil_rgb(bg_hex))
+    paper.paste(layer, mask=mono_r.split()[-1])
+    return paper
+
+
+def generate_letterhead_a4(brief: dict, studio_label: str = "", mono_uri: str = "") -> Image.Image:
+    c = _tpl_ctx(brief, studio_label)
+    bg_hex = _LIGHT_NEUTRAL
+    bg = _pil_rgb(bg_hex)
+    pc_hex, ac_hex, sc_hex = _cguard(c["primary"], bg_hex), _cguard(c["accent"], bg_hex), _cguard(c["secondary"], bg_hex)
+    pc, ac, sc = _pil_rgb(pc_hex), _pil_rgb(ac_hex), _pil_rgb(sc_hex)
+    tc = _pil_rgb(_DARK_NEUTRAL)  # kağıtta gövde metni her zaman koyu okunur
+    name = _tr_upper(c["name"])
+    comp, fname, k = c["comp"], c["font"], c["track"]
+
+    img = Image.new("RGB", (A4_W, A4_H), bg)
+    d = ImageDraw.Draw(img)
+    margin = int(A4_W * 0.09)
+    logo_h = int(A4_H * 0.042)
+
+    # ── Üst: logo (kağıt üstü yeniden renklendirilmiş mono, yoksa tracked isim) ──
+    paper_logo = _paper_logo(mono_uri, pc_hex, bg_hex, logo_h)
+    if paper_logo is not None:
+        img.paste(paper_logo, (margin, margin))
+    else:
+        fs = _fit_tracked(name, fname, int(A4_W * 0.55), k, max_s=logo_h)
+        f = _pil_font(fname, fs)
+        bb = d.textbbox((0, 0), name, font=f)
+        _draw_tracked(d, name, f, margin, margin - bb[1], pc, int(k * fs))
+
+    # ── Sağ üstte comp'a bağlı ince aksan motifi (marka DNA'sı) ──
+    mx1 = A4_W - margin
+    if comp == "editorial":
+        _editorial_rules(d, mx1 - int(A4_W * 0.06), int(A4_W * 0.10), margin,
+                         margin + logo_h, ac, dr=6)
+    elif comp == "badge":
+        _badge_ticks(d, (mx1 - int(A4_W * 0.09), margin, mx1, margin + logo_h), ac,
+                    int(logo_h * 0.45), width=2)
+    elif comp == "echo":
+        _horizon_lines(d, mx1 - int(A4_W * 0.12), int(A4_W * 0.12), margin,
+                       int(logo_h * 0.32), ac, margin + logo_h)
+    elif comp == "diagonal":
+        d.polygon([(mx1 - int(A4_W * 0.10), margin), (mx1, margin),
+                   (mx1 - int(A4_W * 0.06), margin + logo_h)], fill=ac)
+    elif comp == "playful":
+        dr = int(logo_h * 0.16)
+        cy = margin + logo_h // 2
+        for i, col in enumerate((pc, ac, sc)):
+            cx0 = mx1 - int(A4_W * 0.02) - dr - i * dr * 3
+            d.ellipse([cx0 - dr, cy - dr, cx0 + dr, cy + dr], fill=col)
+    else:
+        # block/offset/diagonal-dışı/oversize/statement/corporate ortak: ince ayraç
+        d.rectangle([mx1 - int(A4_W * 0.14), margin + logo_h - 3, mx1, margin + logo_h], fill=ac)
+
+    # ── Header alt çizgisi (gövde alanı — belge burada yazılır, kasıtlı boş) ──
+    rule_y = margin + logo_h + int(A4_H * 0.018)
+    d.rectangle([margin, rule_y, A4_W - margin, rule_y + 2], fill=_mix(bg, tc, 0.14))
+
+    # ── Footer: ince çizgi + tagline · web · e-posta ──
+    foot_rule_y = A4_H - margin - int(A4_H * 0.045)
+    d.rectangle([margin, foot_rule_y, A4_W - margin, foot_rule_y + 2], fill=_mix(bg, tc, 0.18))
+    # Not: tagline burada TEKRAR EDİLMEZ — mono logo (üstte) zaten tagline'ı
+    # kendi içinde basıyor (select_logo_mono_png). Footer sadece web + e-posta.
+    slug = _slug(c["name"])
+    line = f"{slug}.com   ·   hello@{slug}.com"
+    fbody = _pil_font("body", int(A4_H * 0.0125))
+    d.text((margin, foot_rule_y + int(A4_H * 0.014)), line, font=fbody, fill=_mix(bg, tc, 0.5))
+    return img
+
+
+def generate_envelope_dl(brief: dict, studio_label: str = "", mono_uri: str = "") -> Image.Image:
+    c = _tpl_ctx(brief, studio_label)
+    bg_hex = _LIGHT_NEUTRAL
+    bg = _pil_rgb(bg_hex)
+    pc_hex, ac_hex, sc_hex = _cguard(c["primary"], bg_hex), _cguard(c["accent"], bg_hex), _cguard(c["secondary"], bg_hex)
+    pc, ac, sc = _pil_rgb(pc_hex), _pil_rgb(ac_hex), _pil_rgb(sc_hex)
+    tc = _pil_rgb(_DARK_NEUTRAL)
+    name = _tr_upper(c["name"])
+    comp, fname, k = c["comp"], c["font"], c["track"]
+
+    img = Image.new("RGB", (DL_W, DL_H), bg)
+    d = ImageDraw.Draw(img)
+    margin = int(DL_W * 0.045)
+    logo_h = int(DL_H * 0.24)
+
+    # ── Sol üst: gönderen bloğu (logo + web) ──
+    paper_logo = _paper_logo(mono_uri, pc_hex, bg_hex, logo_h)
+    if paper_logo is not None:
+        img.paste(paper_logo, (margin, margin))
+        sender_bottom = margin + logo_h
+    else:
+        fs = _fit_tracked(name, fname, int(DL_W * 0.35), k, max_s=int(DL_H * 0.20))
+        f = _pil_font(fname, fs)
+        bb = d.textbbox((0, 0), name, font=f)
+        _draw_tracked(d, name, f, margin, margin - bb[1], pc, int(k * fs))
+        sender_bottom = margin + (bb[3] - bb[1])
+    slug = _slug(c["name"])
+    fbody = _pil_font("body", int(DL_H * 0.075))
+    d.text((margin, sender_bottom + int(DL_H * 0.035)), f"{slug}.com", font=fbody,
+           fill=_mix(bg, tc, 0.5))
+
+    # ── Sağ üst: pul alanı (kesik çizgili kutu, matbaa normu) ──
+    stamp_w, stamp_h = int(DL_W * 0.11), int(DL_H * 0.30)
+    sx0, sy0 = DL_W - margin - stamp_w, margin
+    _dashed_rect(d, sx0, sy0, sx0 + stamp_w, sy0 + stamp_h, _mix(bg, tc, 0.35))
+
+    # ── Alt kenar: comp'a bağlı tam genişlik aksan şeridi (marka DNA'sı) ──
+    strip_h = int(DL_H * 0.05)
+    if comp == "diagonal":
+        d.polygon([(0, DL_H - strip_h * 2), (DL_W, DL_H - strip_h), (DL_W, DL_H), (0, DL_H)], fill=pc)
+        d.polygon([(0, DL_H - strip_h * 2 - 6), (DL_W, DL_H - strip_h - 6),
+                   (DL_W, DL_H - strip_h), (0, DL_H - strip_h * 2)], fill=ac)
+    elif comp == "editorial":
+        _editorial_rules(d, DL_W // 2, int(DL_W * 0.5), DL_H - strip_h - 14, DL_H - 6, ac, diamond=False)
+    elif comp == "echo":
+        _horizon_lines(d, margin, DL_W - 2 * margin, DL_H - strip_h - 10, int(strip_h * 0.3), ac, DL_H - 4)
+    elif comp == "badge":
+        d.rectangle([0, DL_H - 3, DL_W, DL_H], fill=ac)
+        _badge_ticks(d, (margin, DL_H - strip_h * 2, DL_W - margin, DL_H - 8), ac,
+                    int(strip_h * 0.6), width=2)
+    elif comp == "playful":
+        dr = int(strip_h * 0.35)
+        cols = (pc, ac, sc)
+        cy = DL_H - strip_h
+        cx0, i = margin, 0
+        while cx0 < DL_W - margin:
+            d.ellipse([cx0 - dr, cy - dr, cx0 + dr, cy + dr], fill=cols[i % 3])
+            cx0 += dr * 3
+            i += 1
+    else:
+        d.rectangle([0, DL_H - strip_h, DL_W, DL_H], fill=pc)
+        d.rectangle([0, DL_H - strip_h - 6, DL_W, DL_H - strip_h], fill=ac)
     return img
 
 
@@ -851,7 +1049,8 @@ def generate_extended_pil_assets(brief: dict, studio_label: str = "",
     döner (kit o bölümü gizler, pipeline kırılmaz).
 
     Anahtarlar: card_front, card_back, profile_dark, profile_light,
-    highlight_1..4, banner_linkedin, banner_twitter, logo_reversed
+    highlight_1..4, banner_linkedin, banner_twitter, logo_reversed,
+    letterhead_a4, envelope_dl
     """
     out: dict = {}
 
@@ -884,6 +1083,10 @@ def generate_extended_pil_assets(brief: dict, studio_label: str = "",
     _safe("banner_linkedin", _banner, brief, studio_label, 1584, 396)
     _safe("banner_twitter", _banner, brief, studio_label, 1500, 500)
     _safe("logo_reversed", generate_logo_reversed, brief, mono_uri)
+
+    # Görev 2D (20 Tem 2026): kurumsal kırtasiye
+    _safe("letterhead_a4", generate_letterhead_a4, brief, studio_label, mono_uri)
+    _safe("envelope_dl", generate_envelope_dl, brief, studio_label, mono_uri)
 
     out["_highlight_labels"] = labels
     return out
