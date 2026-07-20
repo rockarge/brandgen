@@ -146,8 +146,11 @@ window.BRAND = {
     max-width:var(--maxw);margin:0 auto;opacity:.4}
 
   /* HERO */
+  /* padding-bottom (20 Tem 2026): tagline, absolute konumlu KAYDIR cue'suyla
+     çakışıyordu (dar iframe viewport'unda canlıda görüldü) — içerik yukarı itilir */
   .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
-    max-width:var(--maxw);margin:0 auto;padding:0 24px}
+    max-width:var(--maxw);margin:0 auto;padding:0 24px 140px}
+  @media(max-height:560px){.scroll-cue{display:none}}
   .hero-name{font-family:var(--hf);font-weight:600;
     font-size:clamp(56px,14vw,170px);line-height:.92;letter-spacing:-.02em}
   .hero-tag{font-size:clamp(16px,2.4vw,24px);color:var(--muted);
@@ -788,7 +791,7 @@ window.BRAND = {
     var left=el("div");
     left.innerHTML = "<strong>"+esc(B.name||"")+"</strong>"+
       (has(B.domain)?(" &nbsp;·&nbsp; <a href='#'>"+esc(B.domain)+"</a>"):"");
-    var right=el("div","sig", esc(B.credit||"Kimlik & sayfa: No.1"));
+    var right=el("div","sig", esc(B.credit||"Üretildi: BrandGen"));
     f.appendChild(left); f.appendChild(right);
     app.appendChild(f);
   })();

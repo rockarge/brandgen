@@ -146,13 +146,34 @@ def generate_html_preview(brief: dict) -> tuple:
             surface = _darken_hex(bg, 12)
             text, muted = "#1A1A1A", "#555555"
 
-    font_display = brief["font_display"]
+    # ── FONT TUTARLILIĞI (20 Tem 2026, Serhat bulgusu — canlı Biricik testi) ──
+    # Sorun: kit sayfası Sonnet'in seçtiği Google fontla (örn. Playfair), logo ise
+    # template'in curated fontuyla (örn. Bodoni Moda) yazılıyordu — kitin "Yazı
+    # Sistemi" bölümü logoyla çelişiyordu. Karar: display font LOGO FONTUNA kilitli
+    # (5 curated fontun 5'i de Google Fonts'ta var, $0). Body font Sonnet'ten kalır.
+    # Font sistemi v3 (20 Tem 2026) ile senkron — her template kendi fontu:
+    _TPL_GOOGLE_DISPLAY = {
+        "A": "Anton", "B": "Bodoni Moda", "C": "Unbounded",
+        "D": "Archivo Black", "E": "Space Grotesk",
+        "F": "Bungee", "G": "DM Serif Display", "H": "Alfa Slab One",
+        "I": "Libre Franklin", "J": "Fredoka",
+    }
+    try:
+        from generators.logo_generator import _resolve_template as _rt
+        _tpl = _rt(brief, studio_label)
+    except Exception:
+        _tpl = ""
+    font_display = _TPL_GOOGLE_DISPLAY.get(_tpl) or brief["font_display"]
     font_body    = brief["font_body"]
 
     def _slug(n): return n.strip().replace(" ", "+")
+    # Display font AĞIRLIKSIZ istenir (v3 fix): Bungee/Alfa Slab One gibi tek
+    # ağırlıklı ailelerde ":wght@400;600;700" css2'de hata verir → font hiç
+    # yüklenmezdi. Ağırlıksız istek her ailede güvenli; başlık 600'ü tarayıcı
+    # gerekirse sentetik kalınlaştırır.
     gf_url = (
         f"https://fonts.googleapis.com/css2?"
-        f"family={_slug(font_display)}:wght@400;600;700"
+        f"family={_slug(font_display)}"
         f"&family={_slug(font_body)}:wght@400;500;600"
         f"&display=swap"
     )
@@ -279,7 +300,9 @@ def generate_html_preview(brief: dict) -> tuple:
                 "heroMobileDark":  fal_images.get("hero_dark", ""),
                 "heroMobileLight": fal_images.get("hero_light", ""),
             },
-            "credit": "Üretildi: BrandGen by Windy Venture Capital",
+            # 20 Tem 2026 — Serhat kararı: müşteri kitinde WVC adı geçmez (proje
+            # bağımsızlığı; BrandGen kendi markası). Kredi sadece ürünü söyler.
+            "credit": "Üretildi: BrandGen · brandgen.no1a.com",
         }, ensure_ascii=False, indent=2)
         + ";"
     )

@@ -373,22 +373,28 @@ def _pil_font(name: str = "display", size: int = 80) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
-# ── TEMPLATE v2 FONT ALIAS (20 Tem 2026 — Görev 2A) ──────────────────────────
-# Yeni template'ler (F-J) YENİ font dosyası gerektirmez — mevcut 5 curated fontu
-# (tpl_A..E.ttf) alias'la yeniden kullanır. Kural: sistem hiçbir yerden kendi
-# kendine font indirmez (bkz. _PIL_FONT_URLS notu). Serhat ileride yeni .ttf
-# koyarsa alias'ı gerçek dosyaya çevirmek yeterli.
+# ── TEMPLATE FONT SİSTEMİ v3 (20 Tem 2026 — font havuzu genişletildi) ─────────
+# Her template'in KENDİ karakter fontu var (Serhat onayıyla Google Fonts'tan
+# static/instance ttf indirildi, latin-ext/Türkçe destekli):
+#   A Anton · B Bodoni Moda · C Unbounded(700) · D Archivo Black · E Space Grotesk
+#   F Bungee · G DM Serif Display · H Alfa Slab One · I Libre Franklin(700)
+#   J Fredoka (eski tpl_C dosyası; yedek: _bak_tpl_C_fredoka.ttf.bak)
+# _TPL_FONT_ALIAS artık sadece EMNİYET AĞI: tpl_X.ttf diskte yoksa alias'a düşer
+# (eski davranış), dosya varsa her template kendi fontunu kullanır.
 _TPL_FONT_ALIAS = {
-    "F": "D",   # retro-fütürist echo   → Archivo Black (geniş, ağır)
-    "G": "B",   # editorial masthead    → Bodoni Moda (serif, editoryal)
-    "H": "E",   # linework badge        → Space Grotesk (teknik, temiz)
-    "I": "E",   # classic corporate     → Space Grotesk (nötr, güvenilir)
-    "J": "C",   # playful stack         → Fredoka (yumuşak, oyuncu)
+    "F": "D",   # fallback: Archivo Black
+    "G": "B",   # fallback: Bodoni Moda
+    "H": "E",   # fallback: Space Grotesk
+    "I": "E",   # fallback: Space Grotesk
+    "J": "C",   # fallback: (artık Unbounded — J dosyası var olduğu sürece kullanılmaz)
 }
 
 
 def _tpl_font_name(tpl: str) -> str:
-    """Template kodu → gerçek font dosya adı (alias çözümü)."""
+    """Template kodu → font dosya adı. Dosya-öncelikli: tpl_X.ttf varsa o,
+    yoksa alias fallback (v3, 20 Tem 2026)."""
+    if (_PIL_FONTS_DIR / f"tpl_{tpl}.ttf").exists():
+        return f"tpl_{tpl}"
     return f"tpl_{_TPL_FONT_ALIAS.get(tpl, tpl)}"
 
 
