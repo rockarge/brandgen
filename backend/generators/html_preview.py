@@ -158,12 +158,18 @@ def generate_html_preview(brief: dict) -> tuple:
         "F": "Bungee", "G": "DM Serif Display", "H": "Alfa Slab One",
         "I": "Libre Franklin", "J": "Fredoka",
     }
+    # 20 Tem 2026 (Pepito bulgusu): font dosyası alias'a düşerse (tpl_X.ttf
+    # diskte yoksa) logo BAŞKA fontla basılır. Sayfa fontunu template koduna
+    # değil, GERÇEKTEN KULLANILAN font dosyasına bağla — yoksa "sayfa fontu
+    # logo fontuyla çelişiyor" bug'ı alias yoluyla geri gelir.
     try:
         from generators.logo_generator import _resolve_template as _rt
+        from generators.logo_generator import _tpl_font_name as _tfn
         _tpl = _rt(brief, studio_label)
+        _font_tpl = _tfn(_tpl).replace("tpl_", "") if _tpl else ""
     except Exception:
-        _tpl = ""
-    font_display = _TPL_GOOGLE_DISPLAY.get(_tpl) or brief["font_display"]
+        _tpl, _font_tpl = "", ""
+    font_display = _TPL_GOOGLE_DISPLAY.get(_font_tpl) or brief["font_display"]
     font_body    = brief["font_body"]
 
     def _slug(n): return n.strip().replace(" ", "+")

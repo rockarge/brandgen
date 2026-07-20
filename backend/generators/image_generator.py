@@ -84,7 +84,16 @@ _ICON_STYLE_PRESETS = {
 }
 _ANTI_GENERIC_TAIL = (
     "Distinctive and specific to the brand concept. "
-    "NOT a generic gradient blob, NOT a swoosh, NOT an overused abstract orb."
+    "NOT a generic gradient blob, NOT a swoosh, NOT an overused abstract orb. "
+    # 20 Tem 2026 — "Pepito" canlı bulgusu: Sonnet mükemmel bir geometrik mark
+    # tarif etmişti (kare kontur + köşeden taşan soru işareti) ama Recraft
+    # bunu yok sayıp bir SAHNE çizdi: çocuk figürü + açık sandık + içinde
+    # yemeğe benzeyen bir nesne. Eski kuyruk sadece SOYUT klişeleri
+    # yasaklıyordu (blob/swoosh/orb), figüratif kaymayı hiç kapatmıyordu.
+    "Flat vector mark only, a single centered symbol on a plain flat background. "
+    "NO scene, NO character, NO mascot, NO human figure, NO depicted object, "
+    "NO food, NO perspective, NO shadow, NO background illustration. "
+    "Follow the described geometry exactly — it is a constructed mark, not a picture."
 )
 
 
