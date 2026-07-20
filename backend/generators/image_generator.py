@@ -396,6 +396,43 @@ def _rgb_dict(hexs: str):
         return None
 
 
+def _strip_svg_bg(content: bytes) -> bytes:
+    """V4.1 SVG'sinin tam-kaplayan zemin PATH'ini siler → mark şeffaf kalır.
+    (20 Tem 2026 canlı bulgu — "Kuzey Terazi")
+
+    SORUN: background_color gönderdiğimizde Recraft zemini SVG'nin İÇİNE
+    basıyor (ilk eleman: `<path d="M 0 0 L W 0 L W H L 0 H L 0 0 z" fill=...>`).
+    Kit hücresinin kendi surface rengi olduğu için sonuç "kutu içinde kutu"
+    görünüyordu.
+
+    NEDEN background_color'ı YİNE DE GÖNDERİYORUZ: model markı o zeminde
+    duracakmış gibi tasarlıyor (koyu zemine açık mark, doğru kontrast). Yani
+    bilgi modele lazım, basılı zemin bize lazım değil. Üretip siliyoruz.
+
+    Güvenlik: desen birebir tam-kaplayan dikdörtgen path'e uyarsa VE sadece
+    ilk eşleşmede siler; uymuyorsa içerik AYNEN döner (asla bozmaz).
+    """
+    try:
+        s = content.decode("utf-8", "ignore")
+        m = re.search(r'viewBox="0\s+0\s+([\d.]+)\s+([\d.]+)"', s)
+        if not m:
+            return content
+        w, h = m.group(1), m.group(2)
+        num = lambda v: re.escape(v) + r"(?:\.0+)?"
+        pat = re.compile(
+            r"<path\s+d=\"M\s*0\s+0\s+L\s*" + num(w) + r"\s+0\s+L\s*" + num(w) +
+            r"\s+" + num(h) + r"\s+L\s*0\s+" + num(h) +
+            r"\s+L\s*0\s+0\s*z\"[^>]*>\s*(?:</path>)?",
+            re.IGNORECASE)
+        s2, n = pat.subn("", s, count=1)
+        if not n:
+            return content
+        return s2.encode("utf-8")
+    except Exception as e:
+        print(f"[image_generator] SVG zemin temizleme atlandı: {e}")
+        return content
+
+
 async def _recraft_vector_mark(prompt: str, colors: list, bg: str) -> str:
     """Recraft V4.1 text-to-vector — GERÇEK SVG mark. (20 Tem 2026, Görev 2E)
 
@@ -433,7 +470,11 @@ async def _recraft_vector_mark(prompt: str, colors: list, bg: str) -> str:
         images = result.get("images") or []
         if not images:
             return ""
-        return await _download_b64(images[0]["url"], "image/svg+xml")
+        # Zemin path'ini SİLEREK indir → mark şeffaf, her hücrede oturur.
+        async with httpx.AsyncClient(timeout=45) as client:
+            resp = await client.get(images[0]["url"])
+            resp.raise_for_status()
+            return _bytes_to_data_uri(_strip_svg_bg(resp.content), "image/svg+xml")
     except Exception as e:
         print(f"[image_generator] Recraft V4.1 vector hata: {e}")
         return ""
