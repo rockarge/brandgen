@@ -153,12 +153,30 @@ def _family_rule(brief: dict) -> str:
 
 
 def _logo_icon_prompt(brief: dict, tpl: str = "") -> str:
-    preset = _ICON_STYLE_PRESETS.get(tpl, "")
+    # ── PRESET KALDIRILDI (20 Tem 2026, ablasyon testiyle kanıtlandı) ────────
+    # `_ICON_STYLE_PRESETS` V3 için yazılmıştı: V3 tarifi takip etmiyordu ve
+    # stili başka türlü yönlendiremiyorduk. V4.1 tarifi ZATEN uyguluyor, preset
+    # artık yön vermiyor — Sonnet'in özgün geometrisini EZİYOR.
+    #
+    # ABLASYON (3 marka × 3 varyant, _test_preset_ablation.py):
+    #   Kuzey Terazi — preset'li K ince/cılız ("conservative, balanced"
+    #     preset'i ürkek çıktı verdi); presetsiz K kalınlaştı, tarifteki
+    #     yatay kesik + terazi kavisi ortaya çıktı.
+    #   Pepito — preset'li ("soft rounded, bouncy") P yumuşadı ve içine
+    #     PERSPEKTİFLİ kutu çizildi (kuyrukta "NO perspective" olmasına rağmen);
+    #     presetsiz form geometrikleşti.
+    #   Çamur ve Sabır — üç varyant neredeyse aynı. Tarif zaten çok spesifikti.
+    # SONUÇ: preset hiçbir vakada FAYDA sağlamadı, 2/3'ünde zarar verdi.
+    # Kural: tarif güçlüyse preset etkisiz, tarif zayıflarsa preset baskın
+    # çıkıp çıktıyı genelleştiriyor. Aile kuralı KALIYOR (B varyantı, aile
+    # kurallı ve presetsiz, neredeyse her yerde C'den iyiydi).
+    #
+    # _ICON_STYLE_PRESETS sözlüğü V3 yedek yolu için dosyada duruyor.
     family = _family_rule(brief)
     # Önce Sonnet'in ürettiği Recraft-optimized prompt'u kullan
     fal_prompt = brief.get("fal_icon_prompt", "").strip()
     if fal_prompt and len(fal_prompt) > 30:
-        return f"{fal_prompt} {family} {preset} {_ANTI_GENERIC_TAIL}".strip()
+        return f"{fal_prompt} {family} {_ANTI_GENERIC_TAIL}".strip()
 
     # Fallback: brief alanlarından generic prompt (audit B2 fix: kelime ortası kesme yok)
     name      = _ascii_safe(brief.get("brand_name", "BRAND"))
