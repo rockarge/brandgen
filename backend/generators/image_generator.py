@@ -30,6 +30,8 @@ Türkçe      : Marka adı _ascii_safe() ile temizlenir — sadece logo_icon fal
 """
 
 import os
+import re          # _strip_svg_bg için ZORUNLU — yokluğu 20 Tem'de sessiz
+                    # başarısızlığa yol açtı (NameError → except → zemin silinmedi)
 import base64
 import asyncio
 import httpx
