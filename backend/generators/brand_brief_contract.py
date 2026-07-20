@@ -61,6 +61,12 @@ DEFAULTS: dict[str, Any] = {
     # 4 etiket üretebilir; boşsa asset_generator._DEFAULT_HIGHLIGHTS kullanılır.
     "highlight_labels":     [],
 
+    # Görev 2C (20 Tem 2026): kapanış "Bu kitte olmayan" listesi — Sonnet
+    # sektöre özgü 3 madde üretir (Pepito canlı testi bulgusu: sabit liste
+    # kutu markasına "ambalaj yok" diyordu). Boşsa template kendi
+    # varsayılan 5 maddesine düşer.
+    "not_included":         [],
+
     # Strateji — brand_brief.py Sonnet üretimi
     "brand_story":          "",
     "brand_story_preview":  "",

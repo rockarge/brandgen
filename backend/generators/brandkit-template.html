@@ -490,19 +490,21 @@ window.BRAND = {
     margin:0 0 36px;padding-left:16px;border-left:1px solid var(--line)}
   body.energy-playful .sec-note{border-left:none;padding-left:0;font-weight:500}
 
-  /* --- Ritim kırılması: logo poster anı --- */
+  /* --- Ritim kırılması: logo poster anı ---
+     20 Tem canlı bulgu (Pepito): ana logo PNG'nin KENDİ dolu zemini var.
+     Sabit 21:9 kutu + max-width:46% "kutu içinde kutu" yapıyordu, ana logo
+     grid hücrelerinden bile etkisiz kalıyordu. Poster artık kutu değil:
+     ana logo kendi oranında TAM GENİŞLİK basılır, etiket posterin dışında. */
   .logo-poster{position:relative;background:var(--surface);
-    border:1px solid var(--line);border-radius:18px;aspect-ratio:21/9;
-    display:flex;align-items:center;justify-content:center;
-    margin-bottom:16px;overflow:hidden}
-  .logo-poster img{max-width:46%;max-height:52%;object-fit:contain}
-  .logo-poster .lbl{position:absolute;bottom:14px;left:18px;font-size:10px;
-    letter-spacing:.28em;text-transform:uppercase;color:var(--muted)}
+    border:1px solid var(--line);border-radius:18px;
+    margin-bottom:10px;overflow:hidden;line-height:0}
+  .logo-poster img{width:100%;height:auto;max-height:560px;
+    object-fit:contain;display:block}
+  .logo-poster-cap{font-size:10px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px 4px}
   body.energy-cinematic .logo-poster{box-shadow:0 10px 44px rgba(0,0,0,.35)}
   body.energy-playful.theme-light .logo-poster{border:2.5px solid #111;
     box-shadow:6px 6px 0 #111}
-  @media(max-width:640px){.logo-poster{aspect-ratio:4/3}
-    .logo-poster img{max-width:64%;max-height:56%}}
 
   /* --- Kapanış: kapsam beyanı (2C karar A) ---
      KURAL: bu bölüm özür dilemez. İki sütun EŞİT ağırlık, eşit tipografi.
@@ -699,8 +701,8 @@ window.BRAND = {
       var poster=el("div","logo-poster");
       var pimg=el("img"); pimg.src=L[posterKey]; pimg.alt="Ana logo";
       poster.appendChild(pimg);
-      poster.appendChild(el("span","lbl","Ana"));
       sec.appendChild(poster);
+      sec.appendChild(el("div","logo-poster-cap","Ana — birincil kullanım"));
     }
 
     var grid=el("div","logo-grid");

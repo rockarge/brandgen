@@ -300,6 +300,10 @@ def generate_html_preview(brief: dict) -> tuple:
                 "heroMobileDark":  fal_images.get("hero_dark", ""),
                 "heroMobileLight": fal_images.get("hero_light", ""),
             },
+            # Görev 2C (20 Tem 2026): kapanış "Bu kitte olmayan" listesi.
+            # Sonnet sektöre özgü 3 madde üretir; boşsa template kendi
+            # varsayılan listesine düşer (geriye dönük güvenli).
+            "notIncluded": [x for x in brief.get("not_included", []) if str(x).strip()],
             # 20 Tem 2026 — Serhat kararı: müşteri kitinde WVC adı geçmez (proje
             # bağımsızlığı; BrandGen kendi markası). Kredi sadece ürünü söyler.
             "credit": "Üretildi: BrandGen · brandgen.no1a.com",
