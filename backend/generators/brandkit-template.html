@@ -110,6 +110,16 @@ window.BRAND = {
     { img: "", caption: "Web arayüzü" }
   ],
 
+  /* ---- KAPSAM BEYANI (Görev 2C) ----
+     "Bu kitte olan" listesi OTOMATİK üretilir (gerçekten var olan asset'lerden).
+     Aşağıdakiler sadece "olmayan" tarafını ve kapanış metnini özelleştirmek
+     içindir; boş bırakılırsa varsayılanlar kullanılır. */
+  // notIncluded:   ["Ambalaj ve etiket tasarımı", "Tabela ve mekân uygulaması"],
+  // nextStepText:  "Ambalaj, tabela, kampanya, web: bunlar brief'le değil masayla çözülür.",
+  // nextStepLabel: "no1a.com",
+  // nextStepUrl:   "https://www.no1a.com",
+  // closeKicker:   "Kimlik bir başlangıçtır, bitiş değil.",
+
   /* ---- İMZA (No.1) ---- */
   credit: "Kimlik & sayfa: No.1"
 };
@@ -146,16 +156,17 @@ window.BRAND = {
     max-width:var(--maxw);margin:0 auto;opacity:.4}
 
   /* HERO */
-  /* padding-bottom (20 Tem 2026): tagline, absolute konumlu KAYDIR cue'suyla
-     çakışıyordu (dar iframe viewport'unda canlıda görüldü) — içerik yukarı itilir */
+  /* KAYDIR cue v2 (20 Tem 2026): absolute bottom konumlandırma iframe embed'inde
+     tagline'la çakışıyordu (padding-bottom denemesi yetmedi — canlıda 2. kez
+     görüldü). Kalıcı çözüm: cue NORMAL AKIŞTA, içeriğin 72px altında — viewport
+     yüksekliği ne olursa olsun çakışma imkânsız. */
   .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
-    max-width:var(--maxw);margin:0 auto;padding:0 24px 140px}
-  @media(max-height:560px){.scroll-cue{display:none}}
+    max-width:var(--maxw);margin:0 auto;padding:48px 24px}
   .hero-name{font-family:var(--hf);font-weight:600;
     font-size:clamp(56px,14vw,170px);line-height:.92;letter-spacing:-.02em}
   .hero-tag{font-size:clamp(16px,2.4vw,24px);color:var(--muted);
     margin-top:28px;max-width:30ch}
-  .scroll-cue{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+  .scroll-cue{position:static;align-self:center;margin-top:72px;
     font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
   .scroll-cue::after{content:"";display:block;width:1px;height:48px;margin:14px auto 0;
     background:linear-gradient(var(--accent),transparent)}
@@ -437,6 +448,91 @@ window.BRAND = {
   }
   .geo-rule::after{content:"";width:4px;height:4px;border-radius:50%;
     background:var(--accent);opacity:.4;flex-shrink:0}
+
+  /* ============================================================ */
+  /*  GÖREV 2C — NO.1 SUNUM KATMANI (20 Temmuz 2026)              */
+  /*  İLKE: No.1 imzası KOMPOZİSYON ve METİNDE taşınır; renk ve   */
+  /*  font MÜŞTERİNİN kalır. Bu katman hiçbir yerde No1a'nın      */
+  /*  lime yeşilini/fontunu kullanmaz — proje bağımsızlığı ve     */
+  /*  swap testi böyle korunur. İki farklı marka aynı ÇERÇEVEYİ   */
+  /*  paylaşır ama aynı GÖRÜNMEZ.                                 */
+  /* ============================================================ */
+
+  /* --- Belge şeridi (fixed) --- */
+  .docbar{
+    position:fixed;top:0;left:0;right:0;z-index:50;height:40px;
+    background:var(--bg);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:16px;padding:0 24px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);
+  }
+  .docbar .db-brand{color:var(--text);font-weight:600;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:34vw}
+  .docbar .db-kind{opacity:.5;white-space:nowrap}
+  .docbar .db-sec{margin-left:auto;color:var(--accent);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:46vw;text-align:right}
+  .docbar .db-prog{position:absolute;left:0;bottom:-1px;height:1px;width:0;
+    background:var(--accent);transition:width .12s linear}
+  @media(max-width:560px){.docbar .db-kind{display:none}
+    .docbar{letter-spacing:.18em;padding:0 16px}}
+  body{padding-top:40px}
+  .hero{min-height:calc(100vh - 40px)}
+  body.energy-playful.theme-light .docbar{border-bottom:2px solid #111}
+
+  /* --- Numaralı bölüm başlığı + No.1 gerekçe satırı --- */
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:20px}
+  .sec-head .eyebrow{margin-bottom:0}
+  .sec-num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px;letter-spacing:.2em;color:var(--accent);opacity:.65;flex-shrink:0}
+  .sec-title.tight{margin-bottom:16px}
+  .concept-big.tight{margin-bottom:20px}
+  .sec-note{color:var(--muted);font-size:15px;max-width:48ch;
+    margin:0 0 36px;padding-left:16px;border-left:1px solid var(--line)}
+  body.energy-playful .sec-note{border-left:none;padding-left:0;font-weight:500}
+
+  /* --- Ritim kırılması: logo poster anı --- */
+  .logo-poster{position:relative;background:var(--surface);
+    border:1px solid var(--line);border-radius:18px;aspect-ratio:21/9;
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:16px;overflow:hidden}
+  .logo-poster img{max-width:46%;max-height:52%;object-fit:contain}
+  .logo-poster .lbl{position:absolute;bottom:14px;left:18px;font-size:10px;
+    letter-spacing:.28em;text-transform:uppercase;color:var(--muted)}
+  body.energy-cinematic .logo-poster{box-shadow:0 10px 44px rgba(0,0,0,.35)}
+  body.energy-playful.theme-light .logo-poster{border:2.5px solid #111;
+    box-shadow:6px 6px 0 #111}
+  @media(max-width:640px){.logo-poster{aspect-ratio:4/3}
+    .logo-poster img{max-width:64%;max-height:56%}}
+
+  /* --- Kapanış: kapsam beyanı (2C karar A) ---
+     KURAL: bu bölüm özür dilemez. İki sütun EŞİT ağırlık, eşit tipografi.
+     "olmayan" sütunu küçük/soluk basılmaz — küçük basarsan itiraf olur,
+     eşit basarsan kapsam beyanı olur. */
+  .close-cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:4px}
+  @media(max-width:640px){.close-cols{grid-template-columns:1fr;gap:12px}}
+  .close-col h3{font-size:13px;letter-spacing:.2em;text-transform:uppercase;
+    margin-bottom:18px;color:var(--text);font-family:var(--bf);font-weight:600}
+  .close-col ul{list-style:none}
+  .close-col li{font-size:15px;line-height:1.45;padding:13px 0 13px 18px;
+    border-bottom:1px solid var(--line);color:var(--text);position:relative}
+  .close-col.have li::before{content:"";position:absolute;left:0;top:20px;
+    width:6px;height:6px;background:var(--accent)}
+  .close-col.lack li::before{content:"";position:absolute;left:0;top:20px;
+    width:6px;height:6px;border:1px solid var(--muted)}
+  .next-step{margin-top:46px;border-top:1px solid var(--line);padding-top:30px;
+    display:flex;justify-content:space-between;align-items:flex-end;
+    gap:24px;flex-wrap:wrap}
+  .next-step .ns-txt{font-family:var(--hf);font-size:clamp(19px,2.8vw,28px);
+    line-height:1.25;max-width:24ch}
+  .next-step .ns-link{font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);text-decoration:none;white-space:nowrap;
+    border:1px solid var(--accent);border-radius:100px;padding:11px 24px;
+    transition:transform .3s var(--ease)}
+  .next-step .ns-link:hover{transform:translateY(-2px)}
+  body.energy-playful.theme-light .next-step .ns-link{border:2px solid #111;
+    color:#111;box-shadow:3px 3px 0 #111}
+  .close-kicker{font-family:var(--hf);font-size:clamp(22px,3.4vw,36px);
+    line-height:1.2;max-width:20ch;margin-top:56px}
 </style>
 </head>
 <body>
@@ -499,6 +595,28 @@ window.BRAND = {
 
   var app = document.getElementById("app");
 
+  /* ---------- GÖREV 2C: numaralı bölüm başlığı üreteci ----------
+     Her bölüm "01 · Hikaye" gibi numaralanır, altına No.1 sesinde tek
+     cümlelik gerekçe düşer. Bu metinler MARKAYA ÖZGÜ DEĞİL — sunum
+     katmanı No.1'in sesidir, marka içeriği brief'ten gelir. Karışmaz. */
+  var SECN = 0;
+  function secHead(sec, o){
+    SECN++;
+    var num = ("0" + SECN).slice(-2);
+    var head = el("div","sec-head");
+    head.appendChild(el("span","sec-num",num));
+    if(has(o.eyebrow)) head.appendChild(el("div","eyebrow",esc(o.eyebrow)));
+    sec.appendChild(head);
+    var cls = (o.titleClass || "sec-title") + (has(o.note) ? " tight" : "");
+    var h = el("h2", cls);
+    h.innerHTML = esc(o.title || "");
+    if(o.decode) h.setAttribute("data-decode", o.title || "");
+    sec.appendChild(h);
+    if(has(o.note)) sec.appendChild(el("p","sec-note",esc(o.note)));
+    sec.setAttribute("data-sec", num + " · " + (o.navTitle || o.title || ""));
+    return h;
+  }
+
   /* ---------- 1. HERO ---------- */
   (function(){
     var sec = el("header","hero reveal");
@@ -523,8 +641,12 @@ window.BRAND = {
   (function(){
     var s=B.story; if(!s || (!has(s.heading) && !hasArr(s.body))) return;
     var sec=el("section","reveal");
-    if(has(s.eyebrow)) sec.appendChild(el("div","eyebrow",esc(s.eyebrow)));
-    if(has(s.heading)) sec.appendChild(el("h2","sec-title",esc(s.heading)));
+    secHead(sec,{
+      eyebrow: s.eyebrow || "Hikaye",
+      title:   s.heading || "",
+      navTitle:"Hikaye",
+      note:    "Kimse markanın hikâyesini dinlemez, ta ki söylemeye değer olana kadar."
+    });
     (s.body||[]).forEach(function(p){
       if(has(p)) sec.appendChild(el("p","",esc(p)+"<br><br>"));
     });
@@ -541,14 +663,15 @@ window.BRAND = {
       app.appendChild(ruler);
     }
     var sec=el("section","reveal");
-    if(has(c.eyebrow)) sec.appendChild(el("div","eyebrow",esc(c.eyebrow)));
-    if(has(c.statement)){
-      // Cinematic: büyük sol-bordered statement; playful: normal sec-title
-      var h=el("h2","concept-big");
-      h.setAttribute("data-decode",c.statement);
-      h.innerHTML=esc(c.statement);
-      sec.appendChild(h);
-    }
+    // Cinematic: büyük sol-bordered statement; playful: normal sec-title
+    secHead(sec,{
+      eyebrow:    c.eyebrow || "Konsept",
+      title:      c.statement || "",
+      titleClass: "concept-big",
+      decode:     true,
+      navTitle:   "Konsept",
+      note:       "Bu cümle başka bir markaya yapıştırılabiliyorsa yanlıştır."
+    });
     if(has(c.body)) sec.appendChild(el("p","muted",esc(c.body)));
     app.appendChild(sec);
   })();
@@ -563,11 +686,27 @@ window.BRAND = {
     ];
     var any = variants.some(function(v){return has(L[v.k]);});
     var sec=el("section","reveal");
-    sec.appendChild(el("div","eyebrow","Logo Sistemi"));
-    sec.appendChild(el("h2","sec-title","İşaret"));
+    secHead(sec,{
+      eyebrow:"Logo Sistemi", title:"İşaret", navTitle:"İşaret",
+      note:"Logo markayı anlatmaz, işaret eder. Anlatmak geri kalanının işi."
+    });
+
+    /* GÖREV 2C — ritim kırılması: ana logo önce TEK BAŞINA, poster ölçeğinde.
+       "Tek güçlü element hükmeder, geri kalan ona hizmet eder" (stil-referans §2.2).
+       Poster gösterildiğinde ana logo grid'de TEKRAR EDİLMEZ. */
+    var posterKey = has(L.primary) ? "primary" : "";
+    if(posterKey){
+      var poster=el("div","logo-poster");
+      var pimg=el("img"); pimg.src=L[posterKey]; pimg.alt="Ana logo";
+      poster.appendChild(pimg);
+      poster.appendChild(el("span","lbl","Ana"));
+      sec.appendChild(poster);
+    }
+
     var grid=el("div","logo-grid");
     if(any){
       variants.forEach(function(v){
+        if(v.k===posterKey) return;   // poster'da gösterildi, tekrarlama
         if(!has(L[v.k])) return;
         var cell=el("div","logo-cell"+(v.k==="inverse"?" inverse":""));
         var img=el("img"); img.src=L[v.k]; img.alt=v.lbl+" logo";
@@ -606,8 +745,10 @@ window.BRAND = {
   (function(){
     var P=B.palette; if(!hasArr(P)) return;
     var sec=el("section","reveal");
-    sec.appendChild(el("div","eyebrow","Renk"));
-    sec.appendChild(el("h2","sec-title","Palet"));
+    secHead(sec,{
+      eyebrow:"Renk", title:"Palet", navTitle:"Palet",
+      note:"Renk süs değil, karar. İki renk aktif çalışır, üçüncüsü aksan kalır."
+    });
     var grid=el("div","swatches");
     P.forEach(function(c){
       if(!has(c.hex)) return;
@@ -629,8 +770,10 @@ window.BRAND = {
   (function(){
     var T=B.type; if(!T || (!has(T.headingName) && !has(T.bodyName))) return;
     var sec=el("section","reveal");
-    sec.appendChild(el("div","eyebrow","Tipografi"));
-    sec.appendChild(el("h2","sec-title","Yazı Sistemi"));
+    secHead(sec,{
+      eyebrow:"Tipografi", title:"Yazı Sistemi", navTitle:"Yazı Sistemi",
+      note:"Font seçimi okunabilirlik değil, karakter kararıdır."
+    });
     var wrap=el("div","type-wrap");
     function card(font,name,note){
       if(!has(name)) return null;
@@ -654,8 +797,10 @@ window.BRAND = {
   (function(){
     var V=B.voice; if(!V || (!hasArr(V.we) && !hasArr(V.weNot) && !hasArr(V.traits))) return;
     var sec=el("section","reveal");
-    sec.appendChild(el("div","eyebrow","Ses & Ton"));
-    sec.appendChild(el("h2","sec-title","Nasıl Konuşuruz"));
+    secHead(sec,{
+      eyebrow:"Ses & Ton", title:"Nasıl Konuşuruz", navTitle:"Ses & Ton",
+      note:"Ne söylediğin kadar ne söylemediğin de markadır."
+    });
     if(hasArr(V.traits)){
       var tr=el("div","traits");
       V.traits.forEach(function(t){ if(has(t)) tr.appendChild(el("span","trait",esc(t))); });
@@ -684,8 +829,10 @@ window.BRAND = {
     var withImg = A.filter(function(a){return a && has(a.img);});
     if(withImg.length===0) return; // görselsizse bölümü hiç gösterme
     var sec=el("section","reveal");
-    sec.appendChild(el("div","eyebrow","Uygulamalar"));
-    sec.appendChild(el("h2","sec-title","Yaşayan Kimlik"));
+    secHead(sec,{
+      eyebrow:"Uygulamalar", title:"Yaşayan Kimlik", navTitle:"Uygulamalar",
+      note:"Kimlik sunumda değil, kullanımda sınanır."
+    });
     var grid=el("div","apps");
     withImg.forEach(function(a){
       var card=el("div","app");
@@ -715,8 +862,10 @@ window.BRAND = {
       app.appendChild(ruler);
     }
     var sec=el("section","reveal");
-    sec.appendChild(el("div","eyebrow","Stüdyo Çıktıları"));
-    sec.appendChild(el("h2","sec-title","Kullanıma Hazır"));
+    secHead(sec,{
+      eyebrow:"Stüdyo Çıktıları", title:"Kullanıma Hazır", navTitle:"Stüdyo Çıktıları",
+      note:"Buradan sonrası konuşma değil, indirip kullanacağın dosyalar."
+    });
 
     function card(src,cap){
       var c=el("div","asset-card");
@@ -784,6 +933,88 @@ window.BRAND = {
     app.appendChild(sec);
   })();
 
+  /* ---------- 8C. BURADAN SONRASI — Görev 2C (20 Tem 2026) ----------
+     Kapsam beyanı. Kitte NE OLDUĞU dinamik olarak gerçekten üretilmiş
+     asset'lerden okunur (uydurma liste yok); NE OLMADIĞI sabit listedir.
+     TON KURALI: özür yok. "maalesef / sadece / ne yazık ki" YASAK.
+     Sınırını bilen ajans daha pahalı durur, daha ucuz değil. */
+  (function(){
+    var L=B.logo||{}, A=B.assets||{}, T=B.type||{};
+    var have=[];
+
+    var lv=["primary","tipo","icon","mono","reversed"].filter(function(k){
+      return has(L[k]);
+    }).length;
+    if(lv){
+      var kin=(has(L.mono)||has(L.primary)) ? " + kinetik" : "";
+      have.push("Logo sistemi — "+lv+" varyant"+kin);
+    }
+    if(hasArr(B.palette)) have.push("Renk paleti — "+B.palette.length+" renk, rol etiketli");
+    if(has(T.headingName)){
+      have.push("Yazı sistemi — "+T.headingName+(has(T.bodyName)?" + "+T.bodyName:""));
+    }
+    if(has(A.cardFront)||has(A.cardBack)) have.push("Kartvizit — 300dpi, matbaaya hazır");
+    if(has(A.profileDark)||has(A.profileLight)) have.push("Profil görselleri — 1080×1080");
+    var hls=(A.highlights||[]).filter(function(h){return h && has(h.img);});
+    if(hls.length) have.push("Highlight kapakları — "+hls.length+" adet");
+    if(has(A.bannerLinkedin)||has(A.bannerTwitter)) have.push("Sosyal banner — LinkedIn + X");
+    if(has(A.heroMobileDark)||has(A.heroMobileLight)) have.push("Mobil hero — 9:16");
+    var apps=(B.applications||[]).filter(function(a){return a && has(a.img);});
+    if(apps.length) have.push("Instagram post şablonu — "+apps.length+" adet");
+
+    if(!have.length) return;   // içerik yoksa kapsam beyanı da yapılmaz
+
+    var lack = hasArr(B.notIncluded) ? B.notIncluded : [
+      "Ambalaj ve etiket tasarımı",
+      "Tabela ve mekân uygulaması",
+      "Kampanya ve reklam üretimi",
+      "Web sitesi ve arayüz tasarımı",
+      "Basılı katalog, menü, broşür"
+    ];
+
+    if(!PLAYFUL){
+      var ruler=el("div","geo-rule reveal");
+      ruler.appendChild(el("span","geo-label","Kapsam"));
+      app.appendChild(ruler);
+    }
+
+    var sec=el("section","reveal");
+    secHead(sec,{
+      eyebrow:"Kapsam", title:"Buradan sonrası", navTitle:"Buradan sonrası",
+      note:"Bir kimlik, neyi kapsamadığını da söylüyorsa dürüsttür."
+    });
+
+    var cols=el("div","close-cols");
+    function col(cls,title,items){
+      var c=el("div","close-col "+cls);
+      c.appendChild(el("h3","",esc(title)));
+      var ul=el("ul");
+      items.forEach(function(x){ if(has(x)) ul.appendChild(el("li","",esc(x))); });
+      c.appendChild(ul);
+      return c;
+    }
+    cols.appendChild(col("have","Bu kitte olan",  have));
+    cols.appendChild(col("lack","Bu kitte olmayan", lack));
+    sec.appendChild(cols);
+
+    var ns=el("div","next-step");
+    ns.appendChild(el("div","ns-txt", esc(
+      B.nextStepText || "Ambalaj, tabela, kampanya, web: bunlar brief'le değil masayla çözülür."
+    )));
+    var a=el("a","ns-link", esc(B.nextStepLabel || "no1a.com"));
+    a.href = B.nextStepUrl || "https://www.no1a.com";
+    a.target = "_blank"; a.rel = "noopener";
+    ns.appendChild(a);
+    sec.appendChild(ns);
+
+    var kick=el("h3","close-kicker");
+    kick.setAttribute("data-decode", B.closeKicker || "Kimlik bir başlangıçtır, bitiş değil.");
+    kick.textContent = B.closeKicker || "Kimlik bir başlangıçtır, bitiş değil.";
+    sec.appendChild(kick);
+
+    app.appendChild(sec);
+  })();
+
   /* ---------- 9. FOOTER ---------- */
   (function(){
     app.appendChild(el("div","rule"));
@@ -794,6 +1025,45 @@ window.BRAND = {
     var right=el("div","sig", esc(B.credit||"Üretildi: BrandGen"));
     f.appendChild(left); f.appendChild(right);
     app.appendChild(f);
+  })();
+
+  /* ---------- 10. BELGE ŞERİDİ — Görev 2C (20 Tem 2026) ----------
+     Kit'i "asset listesi" olmaktan çıkarıp belge yapan katman: marka adı,
+     doküman türü, o an okunan bölüm ve okuma ilerlemesi. Renk/font
+     müşterinin; No.1'in imzası bu çerçevenin VARLIĞI.
+     Tüm bölümler DOM'a eklendikten SONRA çalışmalı — data-sec'leri okur. */
+  (function(){
+    var bar=el("div","docbar");
+    var b=el("span","db-brand"); b.textContent=B.name||"";
+    var kind=el("span","db-kind","Kimlik Kiti");
+    var cur=el("span","db-sec"); cur.textContent="";
+    var prog=el("div","db-prog");
+    bar.appendChild(b); bar.appendChild(kind);
+    bar.appendChild(cur); bar.appendChild(prog);
+    document.body.appendChild(bar);
+
+    var secs=[].slice.call(document.querySelectorAll("[data-sec]"));
+    var ticking=false;
+    function paint(){
+      ticking=false;
+      var st=window.pageYOffset||document.documentElement.scrollTop||0;
+      var h=document.documentElement.scrollHeight-window.innerHeight;
+      prog.style.width=(h>0 ? Math.max(0,Math.min(100,(st/h)*100)) : 0)+"%";
+      var lbl="";
+      for(var i=0;i<secs.length;i++){
+        if(secs[i].getBoundingClientRect().top <= window.innerHeight*0.42){
+          lbl=secs[i].getAttribute("data-sec");
+        }
+      }
+      if(cur.textContent!==lbl) cur.textContent=lbl;
+    }
+    function onScroll(){
+      if(ticking) return;
+      ticking=true; requestAnimationFrame(paint);
+    }
+    addEventListener("scroll",onScroll,{passive:true});
+    addEventListener("resize",onScroll);
+    paint();
   })();
 
   /* ---------- REVEAL gözlemcisi ---------- */

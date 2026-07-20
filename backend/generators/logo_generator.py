@@ -693,6 +693,9 @@ _EDITORIAL_SIGNALS = (
 _RETRO_SIGNALS = (
     "retro", "synth", "arcade", "gaming", "oyun stüdyo", "siber", "cyber",
     "uzay", "space", "fütür", "futur", "neon", "yazılım", "software", "tech",
+    # 20 Tem canlı test bulgusu (Piksel Işık): Sonnet dna_sector'e "Lüks/Premium"
+    # yazınca retro marka editorial'e (G) düştü — retro kelime dağarcığı genişletildi
+    "nostalj", "piksel", "pixel", "synthwave", "8-bit", "jeton", "atari", "vhs",
 )
 _CRAFT_SIGNALS = (
     "kahve", "coffee", "craft", "el yapımı", "handmade", "bira", "brew",
@@ -711,10 +714,13 @@ def _style_signal(brief: dict) -> str:
         str(brief.get("energy", "")),
     ]
     blob = " ".join(parts).lower()
+    # Sıra (20 Tem revizyonu): retro, editorial'den ÖNCE — Sonnet retro markalara
+    # "Lüks/Premium" dna_sector'ü yazabiliyor (Piksel Işık canlı bulgusu); gerçek
+    # lüks/editoryal markada ise retro kelimesi geçmez, yanlış pozitif riski düşük.
     for signals, tpl in (
         (_CORPORATE_SIGNALS, "I"),
-        (_EDITORIAL_SIGNALS, "G"),
         (_RETRO_SIGNALS, "F"),
+        (_EDITORIAL_SIGNALS, "G"),
         (_CRAFT_SIGNALS, "H"),
     ):
         if any(s in blob for s in signals):
