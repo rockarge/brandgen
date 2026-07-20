@@ -109,22 +109,46 @@ _ANTI_GENERIC_TAIL = (
 # harfi çağrıştıran simgeler de olabiliyor."
 # 5 aile, 10 AI üretimiyle canlı test edildi; hepsi V4.1'de ayrışıyor.
 _MARK_FAMILY_RULES = {
+    # NOT (20 Tem, Serhat): "sadece o ailede hep aynı şeyleri vermesin her
+    # firmaya." Her aile kuralı artık TEK bir çözüm tarif etmiyor; ailenin
+    # icinde BİRDEN FAZLA YOL sayılıyor ve modele "markaya en uygun olanı seç,
+    # varsayilana kacma" deniyor. Aile = sinir degil, alan.
     "1": ("Build the mark from the brand's two initials joined into ONE form. "
-          "The two letters must read as a single designed unit, not as two "
-          "letters placed side by side."),
-    "2": ("Build the mark from ONE letter, abstracted: reduce it to its "
-          "essential strokes, then cut, bend, extend or interrupt one of them. "
-          "The letter must still be recognisable but must read as a form first."),
-    "3": ("Build the mark so its NEGATIVE SPACE carries the meaning. The empty "
-          "area inside or around the form must be read as a second shape that "
-          "expresses the brand concept."),
+          "Ways this can be done — pick the one that fits THIS brand, do not "
+          "default to the first: letters sharing a stroke; one letter nested "
+          "inside the other's counter; letters mirrored around a shared axis; "
+          "one letter rotated so it completes the other; letters cut by a "
+          "common line. The pair must read as a single designed unit."),
+    "2": ("Build the mark from ONE letter, abstracted. Ways this can be done — "
+          "pick the one that fits THIS brand, do not default to the first: cut "
+          "a stroke short; bend one stroke into a curve; extend a stroke past "
+          "the letter's boundary; remove a stroke entirely and let the eye "
+          "complete it; split the letter into separated planes; rotate one "
+          "part against the rest. The letter stays recognisable but reads as a "
+          "form first."),
+    "3": ("Build the mark so its NEGATIVE SPACE carries the meaning. Ways this "
+          "can be done — pick the one that fits THIS brand, do not default to "
+          "the first: the counter inside a letter becomes a second object; the "
+          "gap between two forms reads as a third shape; a deliberate notch "
+          "cut into the silhouette; an unclosed outline where the missing arc "
+          "is the message; overlapping shapes whose intersection is left "
+          "empty. The empty area must express the brand concept, not decorate it."),
     "4": ("Build the mark by transforming part of a letter into an object that "
-          "belongs to this industry. Letter and object must be ONE continuous "
-          "stroke, never a letter with a picture placed next to it."),
+          "belongs to this industry. Ways this can be done — pick the one that "
+          "fits THIS brand, do not default to the first: a terminal becomes "
+          "the object; a stroke bends into it; the object replaces a missing "
+          "part of the letter; the object is formed by the letter's negative "
+          "space. Letter and object must be ONE continuous stroke, never a "
+          "letter with a picture placed next to it."),
     "5": ("Build the mark as a single letter held inside an enclosing form. "
-          "Choose the enclosing shape from the brand's own character — it must "
-          "NOT default to a circle. Letter and enclosure share one stroke logic "
-          "and a deliberate negative gap."),
+          "The enclosure must come from the brand's own character — shield, "
+          "badge, arch, tag, seal, plaque, capsule, crest are all valid; it "
+          "must NOT default to a circle. Ways the two can relate — pick the "
+          "one that fits THIS brand, do not default to the first: "
+          "the letter breaks the enclosure's edge; the enclosure is open on "
+          "one side; the letter and frame share a stroke; the letter sits in "
+          "deliberate off-centre tension. Letter and enclosure share one "
+          "stroke logic and a deliberate negative gap."),
 }
 # Aile 1 için bağlanma biçimi — Serhat: "bazen birleşik içiçe geçmiş, bazen ayrı"
 _MARK_LINK_RULES = {

@@ -43,6 +43,7 @@ import colorsys
 
 from generators.brand_brief_contract import normalize_brief, has_feature  # sözleşme
 from generators.logo_generator import select_logo_mono_png, select_logo_primary_png, select_logo_tipo_png
+from generators.logo_generator import _brand_upper   # dil bilinçli büyük harf
 from generators.image_generator import generate_all_images  # fal.ai: icon + app görselleri
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "brandkit-template.html")
@@ -257,6 +258,10 @@ def generate_html_preview(brief: dict) -> tuple:
         "window.BRAND = "
         + json.dumps({
             "name":    brand_name,
+            # Belge şeridi (docbar) için DİL BİLİNÇLİ büyük harf. CSS'in
+            # text-transform:uppercase'i yabancı kelimeyi ayırt edemiyor
+            # ("VIRA DIGITAL" → "VİRA DİGİTAL" basıyordu). 20 Tem canlı bulgu.
+            "nameUpper": _brand_upper(brief),
             "tagline": tagline,
             "domain":  "",
             "energy":  energy,

@@ -1040,7 +1040,12 @@ window.BRAND = {
      Tüm bölümler DOM'a eklendikten SONRA çalışmalı — data-sec'leri okur. */
   (function(){
     var bar=el("div","docbar");
-    var b=el("span","db-brand"); b.textContent=B.name||"";
+    // nameUpper: dil bilinçli büyük harf (VIRA DIGITAL). CSS'in
+    // text-transform'u yabancı kelimede i→İ yapıp "VİRA DİGİTAL" basıyordu.
+    // Alan yoksa (eski job) CSS'e bırakılır — geriye dönük güvenli.
+    var b=el("span","db-brand");
+    if(has(B.nameUpper)){ b.textContent=B.nameUpper; b.style.textTransform="none"; }
+    else { b.textContent=B.name||""; }
     var kind=el("span","db-kind","Kimlik Kiti");
     var cur=el("span","db-sec"); cur.textContent="";
     var prog=el("div","db-prog");
